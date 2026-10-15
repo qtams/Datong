@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CardController;
 use App\Http\Controllers\Api\MemberAuthController;
 use App\Http\Controllers\Api\MemberController;
 use App\Http\Controllers\Api\UserController;
@@ -17,19 +18,13 @@ use Illuminate\Support\Facades\Route;
    Laravel receives:
    Authorization: Bearer <Firebase ID Token>
 
-   MemberAuthController verifies the token before trusting
-   the Firebase UID.
+   MemberAuthController verifies the Firebase token.
 ========================================================= */
 
 Route::prefix('member-auth')
     ->group(function () {
         /* =================================================
            SYNC MEMBER
-
-           Used after:
-           - Email/password registration
-           - Email/password login
-           - Google login/signup
         ================================================= */
 
         Route::post(
@@ -63,7 +58,7 @@ Route::prefix('member-auth')
    - Staff
    - Viewer
 
-   Firebase Members DO NOT authenticate through this route.
+   Firebase Members DO NOT authenticate here.
 ========================================================= */
 
 Route::middleware('web')
@@ -96,10 +91,6 @@ Route::middleware('web')
 
 /* =========================================================
    AUTHENTICATED INTERNAL API
-
-   These routes require a logged-in Laravel internal user.
-
-   Used by the Datong admin dashboard.
 ========================================================= */
 
 Route::middleware([
@@ -123,6 +114,61 @@ Route::middleware([
         [
             AuthController::class,
             'logout',
+        ]
+    );
+
+    /* =====================================================
+       CARD CATALOG
+
+       Internal users manage the available card templates.
+
+       POST update is intentional because updates may contain
+       multipart/form-data image files.
+
+       GET    /api/card-catalog
+       POST   /api/card-catalog
+       GET    /api/card-catalog/{card}
+       POST   /api/card-catalog/{card}
+       DELETE /api/card-catalog/{card}
+    ===================================================== */
+
+    Route::get(
+        '/card-catalog',
+        [
+            CardController::class,
+            'index',
+        ]
+    );
+
+    Route::post(
+        '/card-catalog',
+        [
+            CardController::class,
+            'store',
+        ]
+    );
+
+    Route::get(
+        '/card-catalog/{card}',
+        [
+            CardController::class,
+            'show',
+        ]
+    );
+
+    Route::post(
+        '/card-catalog/{card}',
+        [
+            CardController::class,
+            'update',
+        ]
+    );
+
+    Route::delete(
+        '/card-catalog/{card}',
+        [
+            CardController::class,
+            'destroy',
         ]
     );
 
@@ -171,12 +217,7 @@ Route::middleware([
     /* =====================================================
        MEMBERS
 
-       Read-only member management for the admin dashboard.
-
-       Data comes from the real Laravel members table.
-
-       Firebase members are created/synced through:
-       POST /api/member-auth/sync
+       Internal dashboard read-only member management.
     ===================================================== */
 
     Route::get(
