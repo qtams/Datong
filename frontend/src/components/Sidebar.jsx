@@ -18,11 +18,12 @@ import {
    MEMBER RESTRICTED ITEMS
 
    Firebase Members cannot access:
+   - Card Catalog
    - Users
    - Members
 ========================================================= */
 
-const MEMBER_RESTRICTED_IDS = new Set(["users", "members"]);
+const MEMBER_RESTRICTED_IDS = new Set(["card-catalog", "users", "members"]);
 
 /* =========================================================
    TOOLTIP
@@ -150,7 +151,6 @@ function SidebarItem({ item, active, collapsed, onClick }) {
           initial={false}
           animate={{
             opacity: active ? 1 : 0,
-
             height: active ? 16 : 8,
           }}
           transition={{
@@ -309,7 +309,7 @@ function Sidebar({
      VISIBLE NAVIGATION
 
      Members:
-     Hide Users + Members.
+     Hide Card Catalog + Users + Members.
 
      Internal users:
      Show everything.

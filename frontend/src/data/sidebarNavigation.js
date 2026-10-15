@@ -6,6 +6,7 @@ import {
   PiggyBank,
   BarChart3,
   FileText,
+  Database,
   UsersRound,
   UserRoundCheck,
   Settings,
@@ -16,8 +17,6 @@ import {
    MAIN SIDEBAR NAVIGATION
 
    Centralized sidebar configuration.
-   Add or remove menu items here instead of editing
-   Sidebar.jsx directly.
 ========================================================= */
 
 export const sidebarNavigation = [
@@ -112,6 +111,13 @@ export const sidebarNavigation = [
     title: "Admin",
 
     items: [
+      {
+        id: "card-catalog",
+        label: "Card Catalog",
+        icon: Database,
+        path: "/card-catalog",
+      },
+
       {
         id: "users",
         label: "Users",

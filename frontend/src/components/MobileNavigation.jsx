@@ -24,17 +24,25 @@ const PRIMARY_IDS = ["dashboard", "cards", "transactions", "savings-goals"];
    MORE IDS
 ========================================================= */
 
-const MORE_IDS = ["budgets", "analytics", "reports", "users", "members"];
+const MORE_IDS = [
+  "budgets",
+  "analytics",
+  "reports",
+  "card-catalog",
+  "users",
+  "members",
+];
 
 /* =========================================================
    MEMBER RESTRICTED
 
    Firebase members cannot see/access:
+   - Card Catalog
    - Users
    - Members
 ========================================================= */
 
-const MEMBER_RESTRICTED_IDS = new Set(["users", "members"]);
+const MEMBER_RESTRICTED_IDS = new Set(["card-catalog", "users", "members"]);
 
 /* =========================================================
    MOTION
@@ -56,8 +64,6 @@ const SHEET_SPRING = {
 
 /* =========================================================
    FLATTEN NAVIGATION
-
-   Add the original group ID to each navigation item.
 ========================================================= */
 
 const ALL_NAVIGATION_ITEMS = sidebarNavigation.flatMap((group) =>
@@ -223,8 +229,6 @@ function MobileNavigationContent() {
 
   /* =======================================================
      MORE ITEMS
-
-     Members do not receive Users/Members.
   ======================================================= */
 
   const moreItems = useMemo(
@@ -575,8 +579,6 @@ function MobileNavigationContent() {
       <AnimatePresence>
         {moreOpen && (
           <div className="fixed inset-0 z-[200] lg:hidden">
-            {/* BACKDROP */}
-
             <motion.button
               type="button"
               aria-label="Close More menu"
@@ -595,8 +597,6 @@ function MobileNavigationContent() {
               onClick={handleCloseMore}
               className="absolute inset-0 cursor-default bg-black/55 backdrop-blur-[4px]"
             />
-
-            {/* SHEET */}
 
             <motion.div
               role="dialog"

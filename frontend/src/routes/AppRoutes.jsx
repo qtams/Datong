@@ -4,6 +4,8 @@ import { useAuth } from "../auth/AuthContext";
 
 import Dashboard from "../pages/Dashboard";
 
+import CardCatalogPage from "../pages/cards/CardCatalogPage";
+
 import UsersPage from "../pages/users/UsersPage";
 
 import MembersPage from "../pages/members/MembersPage";
@@ -27,6 +29,13 @@ export const PAGE_META = {
     path: "/cards",
     title: "Cards",
     description: "Manage cards and financial accounts",
+  },
+
+  cardCatalog: {
+    id: "card-catalog",
+    path: "/card-catalog",
+    title: "Card Catalog",
+    description: "Manage available card providers",
   },
 
   transactions: {
@@ -118,9 +127,6 @@ function normalizePath(pathname) {
 
 /* =========================================================
    GET PAGE META
-
-   /members/MBR-000001 still uses Members as its
-   active navigation item.
 ========================================================= */
 
 export function getPageMeta(pathname) {
@@ -146,30 +152,14 @@ export function getPageMeta(pathname) {
 
    Firebase/public Members must NEVER access:
 
+   /card-catalog
    /users
    /members
    /members/:memberId
-
-   This protects the route itself.
-
-   Hiding sidebar items alone is NOT security because
-   someone could manually type the URL.
 ========================================================= */
 
 function InternalOnlyRoute({ children }) {
   const { user, authType, isMember } = useAuth();
-
-  /* =======================================================
-     MEMBER CHECK
-
-     Support both:
-     - authType === "member"
-     - isMember === true
-     - user.role === "member"
-
-     This keeps the guard safe even if the AuthContext
-     implementation changes slightly.
-  ======================================================= */
 
   const memberRole =
     String(user?.role || "")
@@ -236,19 +226,7 @@ function ModulePlaceholder({ title, description, loading = false }) {
 
   return (
     <div className="mx-auto w-full max-w-[1600px]">
-      <div
-        className="
-          flex
-          min-h-[420px]
-          items-center
-          justify-center
-          rounded-xl
-          border
-          border-gray-200
-          bg-white
-          p-6
-        "
-      >
+      <div className="flex min-h-[420px] items-center justify-center rounded-xl border border-gray-200 bg-white p-6">
         <div className="max-w-[320px] text-center">
           <div className="mx-auto mb-4 h-10 w-10 rounded-xl bg-gray-100" />
 
@@ -287,6 +265,8 @@ function AppRoutes({ loading = false }) {
 
       {/* ===================================================
           CARDS
+
+          Member/user personal financial cards.
       =================================================== */}
 
       <Route
@@ -376,11 +356,27 @@ function AppRoutes({ loading = false }) {
       />
 
       {/* ===================================================
-          USERS
+          CARD CATALOG
 
           INTERNAL USERS ONLY.
 
-          Firebase members are redirected to Dashboard.
+          Admin/internal staff configure available
+          bank and e-wallet templates here.
+
+          Firebase Members cannot access this page.
+      =================================================== */}
+
+      <Route
+        path={PAGE_META.cardCatalog.path}
+        element={
+          <InternalOnlyRoute>
+            <CardCatalogPage loading={loading} />
+          </InternalOnlyRoute>
+        }
+      />
+
+      {/* ===================================================
+          USERS
       =================================================== */}
 
       <Route
@@ -394,10 +390,6 @@ function AppRoutes({ loading = false }) {
 
       {/* ===================================================
           MEMBERS
-
-          INTERNAL USERS ONLY.
-
-          Firebase members cannot see other members.
       =================================================== */}
 
       <Route
@@ -411,8 +403,6 @@ function AppRoutes({ loading = false }) {
 
       {/* ===================================================
           MEMBER DETAILS
-
-          INTERNAL USERS ONLY.
       =================================================== */}
 
       <Route
@@ -462,10 +452,6 @@ function AppRoutes({ loading = false }) {
 
       {/* ===================================================
           OLD REGISTRATIONS
-
-          Registrations previously pointed to Members.
-          Protect it as well so a Firebase member cannot
-          use the legacy URL to reach the Members module.
       =================================================== */}
 
       <Route

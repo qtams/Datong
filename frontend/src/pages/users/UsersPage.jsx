@@ -6,6 +6,7 @@ import {
   ChevronDown,
   Mail,
   Pencil,
+  Plus,
   Search,
   ShieldCheck,
   Trash2,
@@ -13,6 +14,8 @@ import {
   UsersRound,
   X,
 } from "lucide-react";
+
+import { AnimatePresence, motion } from "motion/react";
 
 import toast from "react-hot-toast";
 
@@ -32,6 +35,94 @@ import {
 } from "../../services/usersApi";
 
 import { confirmDelete } from "../../utils/sweetAlert";
+
+/* =========================================================
+   MOBILE FLOATING ADD
+========================================================= */
+
+function MobileFloatingAddButton({
+  onClick,
+  label = "Add user",
+  disabled = false,
+}) {
+  return (
+    <motion.button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      initial={{
+        opacity: 0,
+        scale: 0.75,
+        y: 14,
+      }}
+      animate={{
+        opacity: 1,
+        scale: 1,
+        y: 0,
+      }}
+      exit={{
+        opacity: 0,
+        scale: 0.8,
+        y: 10,
+      }}
+      whileTap={
+        disabled
+          ? undefined
+          : {
+              scale: 0.88,
+            }
+      }
+      transition={{
+        type: "spring",
+        stiffness: 460,
+        damping: 28,
+      }}
+      className="
+        fixed
+        right-5
+        z-[90]
+
+        flex
+        h-[58px]
+        w-[58px]
+        items-center
+        justify-center
+
+        rounded-full
+
+        border-[4px]
+        border-[#f7f7f8]
+
+        bg-black
+        text-white
+
+        shadow-[0_12px_32px_rgba(0,0,0,0.30)]
+
+        outline-none
+
+        transition-colors
+
+        active:bg-gray-800
+
+        focus-visible:ring-2
+        focus-visible:ring-black
+        focus-visible:ring-offset-2
+
+        disabled:cursor-not-allowed
+        disabled:opacity-50
+
+        sm:hidden
+      "
+      style={{
+        bottom: "calc(112px + env(safe-area-inset-bottom))",
+      }}
+    >
+      <Plus size={23} strokeWidth={2} />
+    </motion.button>
+  );
+}
 
 /* =========================================================
    INITIALS
@@ -125,10 +216,14 @@ function RoleBadge({ role }) {
         inline-flex
         items-center
         gap-1.5
+
         rounded-md
+
         border
+
         px-2
         py-1
+
         text-[9px]
         font-medium
 
@@ -301,9 +396,7 @@ function UsersContent() {
     setSavingUser(true);
 
     try {
-      /* ===============================================
-           UPDATE
-        =============================================== */
+      /* UPDATE */
 
       if (selectedUser) {
         const response = await updateUser(selectedUser.id, values);
@@ -327,9 +420,7 @@ function UsersContent() {
         return true;
       }
 
-      /* ===============================================
-           CREATE
-        =============================================== */
+      /* CREATE */
 
       const response = await createUser(values);
 
@@ -418,6 +509,7 @@ function UsersContent() {
           breadcrumbs={[
             {
               label: "Home",
+
               href: "/",
             },
 
@@ -436,18 +528,26 @@ function UsersContent() {
               type="button"
               onClick={handleAddUser}
               className="
-                flex
+                hidden
                 h-9
                 items-center
                 gap-2
+
                 rounded-lg
+
                 bg-black
+
                 px-3.5
+
                 text-[11px]
                 font-medium
                 text-white
+
                 transition-colors
+
                 hover:bg-gray-800
+
+                sm:flex
               "
             >
               <UserPlus size={14} strokeWidth={1.7} />
@@ -566,17 +666,26 @@ function UsersContent() {
                 className="
                   h-9
                   w-full
+
                   rounded-lg
+
                   border
                   border-gray-200
+
                   bg-gray-50
+
                   pl-9
                   pr-9
+
                   text-[11px]
                   text-gray-800
+
                   outline-none
+
                   transition-all
+
                   placeholder:text-gray-400
+
                   focus:border-gray-300
                   focus:bg-white
                   focus:ring-2
@@ -593,14 +702,18 @@ function UsersContent() {
                     absolute
                     right-2
                     top-1/2
+
                     flex
                     h-6
                     w-6
                     -translate-y-1/2
                     items-center
                     justify-center
+
                     rounded-md
+
                     text-gray-400
+
                     hover:bg-gray-100
                     hover:text-gray-800
                   "
@@ -619,18 +732,27 @@ function UsersContent() {
                   onChange={(event) => setRoleFilter(event.target.value)}
                   className="
                     h-9
+
                     appearance-none
+
                     rounded-lg
+
                     border
                     border-gray-200
+
                     bg-white
+
                     pl-3
                     pr-8
+
                     text-[11px]
                     font-medium
                     text-gray-600
+
                     outline-none
+
                     hover:border-gray-300
+
                     focus:border-gray-400
                   "
                 >
@@ -663,14 +785,20 @@ function UsersContent() {
                   onClick={handleClearFilters}
                   className="
                     h-9
+
                     rounded-lg
+
                     border
                     border-gray-200
+
                     bg-white
+
                     px-3
+
                     text-[10px]
                     font-medium
                     text-gray-500
+
                     hover:bg-gray-50
                     hover:text-black
                   "
@@ -731,8 +859,11 @@ function UsersContent() {
                       className="
                           border-b
                           border-gray-100
+
                           transition-colors
+
                           last:border-0
+
                           hover:bg-gray-50/60
                         "
                     >
@@ -834,9 +965,13 @@ function UsersContent() {
                                 w-8
                                 items-center
                                 justify-center
+
                                 rounded-lg
+
                                 text-gray-400
+
                                 transition-colors
+
                                 hover:bg-gray-100
                                 hover:text-gray-900
                               "
@@ -854,9 +989,13 @@ function UsersContent() {
                                 w-8
                                 items-center
                                 justify-center
+
                                 rounded-lg
+
                                 text-gray-400
+
                                 transition-colors
+
                                 hover:bg-red-50
                                 hover:text-red-500
                               "
@@ -949,14 +1088,20 @@ function UsersContent() {
                           h-8
                           items-center
                           gap-1.5
+
                           rounded-lg
+
                           border
                           border-gray-200
+
                           bg-white
+
                           px-3
+
                           text-[10px]
                           font-medium
                           text-gray-600
+
                           hover:bg-gray-50
                           hover:text-black
                         "
@@ -973,14 +1118,20 @@ function UsersContent() {
                           h-8
                           items-center
                           gap-1.5
+
                           rounded-lg
+
                           border
                           border-red-100
+
                           bg-white
+
                           px-3
+
                           text-[10px]
                           font-medium
                           text-red-500
+
                           hover:bg-red-50
                         "
                     >
@@ -1040,6 +1191,19 @@ function UsersContent() {
           )}
         </section>
       </div>
+
+      {/* ===================================================
+          MOBILE FLOATING ADD
+
+          Hidden while Add/Edit User is open.
+          Mobile only via sm:hidden.
+      =================================================== */}
+
+      <AnimatePresence>
+        {!modalOpen && (
+          <MobileFloatingAddButton label="Add user" onClick={handleAddUser} />
+        )}
+      </AnimatePresence>
 
       {/* ===================================================
           USER FORM

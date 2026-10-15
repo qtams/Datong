@@ -49,6 +49,7 @@ const STEPS = [
     title: "User information",
     description: "Personal and login details",
   },
+
   {
     id: 2,
     title: "Account details",
@@ -121,9 +122,9 @@ function ProgressHeader({ currentStep, onBackToStepOne }) {
 
   return (
     <div className="border-b border-gray-100 bg-white">
-      {/* ===============================================
+      {/* =================================================
           STEP INFO
-      =============================================== */}
+      ================================================= */}
 
       <div className="flex items-center justify-between gap-4 px-5 py-3.5 sm:px-6">
         <div className="min-w-0">
@@ -164,9 +165,9 @@ function ProgressHeader({ currentStep, onBackToStepOne }) {
         )}
       </div>
 
-      {/* ===============================================
+      {/* =================================================
           PROGRESS LINE
-      =============================================== */}
+      ================================================= */}
 
       <div className="h-[3px] w-full overflow-hidden bg-gray-100">
         <motion.div
@@ -532,10 +533,15 @@ function UserFormModal({ open, onClose, onSubmit, user }) {
     });
   };
 
+  /* =======================================================
+     RENDER
+  ======================================================= */
+
   return (
     <AnimatePresence>
       {open && (
         <ModalShell
+          mobileSheet
           onClose={onClose}
           size="max-w-[620px]"
           labelledBy="user-modal-title"
@@ -609,26 +615,23 @@ function UserFormModal({ open, onClose, onSubmit, user }) {
           <form onSubmit={handleSubmit}>
             <div className="min-h-[390px] p-5 sm:p-6">
               <AnimatePresence mode="wait" initial={false}>
-                {/* =================================================
+                {/* ===========================================
                     STEP 1
-                ================================================= */}
+                =========================================== */}
 
                 {currentStep === 1 && (
                   <motion.div
                     key="user-info"
                     initial={{
                       opacity: 0,
-
                       x: -10,
                     }}
                     animate={{
                       opacity: 1,
-
                       x: 0,
                     }}
                     exit={{
                       opacity: 0,
-
                       x: -10,
                     }}
                     transition={{
@@ -637,9 +640,9 @@ function UserFormModal({ open, onClose, onSubmit, user }) {
                       ease: "easeOut",
                     }}
                   >
-                    {/* =============================================
+                    {/* =====================================
                         SECTION TITLE
-                    ============================================= */}
+                    ===================================== */}
 
                     <div className="mb-5 flex items-center gap-3">
                       <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-gray-600">
@@ -657,9 +660,9 @@ function UserFormModal({ open, onClose, onSubmit, user }) {
                       </div>
                     </div>
 
-                    {/* =============================================
+                    {/* =====================================
                         FIELDS
-                    ============================================= */}
+                    ===================================== */}
 
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       {/* FULL NAME */}
@@ -879,26 +882,23 @@ function UserFormModal({ open, onClose, onSubmit, user }) {
                   </motion.div>
                 )}
 
-                {/* =================================================
+                {/* ===========================================
                     STEP 2
-                ================================================= */}
+                =========================================== */}
 
                 {currentStep === 2 && (
                   <motion.div
                     key="account-details"
                     initial={{
                       opacity: 0,
-
                       x: 10,
                     }}
                     animate={{
                       opacity: 1,
-
                       x: 0,
                     }}
                     exit={{
                       opacity: 0,
-
                       x: 10,
                     }}
                     transition={{
@@ -907,9 +907,9 @@ function UserFormModal({ open, onClose, onSubmit, user }) {
                       ease: "easeOut",
                     }}
                   >
-                    {/* =============================================
+                    {/* =====================================
                         USER SUMMARY
-                    ============================================= */}
+                    ===================================== */}
 
                     <div className="mb-5 rounded-xl border border-gray-200 bg-gray-50/70 p-4">
                       <div className="flex items-center gap-3">
@@ -958,9 +958,9 @@ function UserFormModal({ open, onClose, onSubmit, user }) {
                       </div>
                     </div>
 
-                    {/* =============================================
+                    {/* =====================================
                         ACCOUNT SECTION
-                    ============================================= */}
+                    ===================================== */}
 
                     <div className="mb-5 flex items-center gap-3">
                       <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-gray-600">
@@ -994,9 +994,9 @@ function UserFormModal({ open, onClose, onSubmit, user }) {
                       />
                     </div>
 
-                    {/* =============================================
+                    {/* =====================================
                         PASSWORD
-                    ============================================= */}
+                    ===================================== */}
 
                     {!editing ? (
                       <div className="mt-5 overflow-hidden rounded-xl border border-gray-200">
@@ -1117,7 +1117,7 @@ function UserFormModal({ open, onClose, onSubmit, user }) {
                 FOOTER
             ================================================= */}
 
-            <div className="sticky bottom-0 z-30 border-t border-gray-100 bg-white px-5 py-4 sm:px-6">
+            <div className="sticky bottom-0 z-30 border-t border-gray-100 bg-white/95 px-5 py-4 backdrop-blur-md sm:px-6">
               <div className="flex items-center justify-between gap-3">
                 {/* LEFT */}
 
