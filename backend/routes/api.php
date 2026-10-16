@@ -82,8 +82,6 @@ Route::middleware(
         /* =================================================
            MEMBER CARD CATALOG
 
-           Active providers only.
-
            GET /api/member-finance/card-catalog
         ================================================= */
 
@@ -96,9 +94,10 @@ Route::middleware(
         );
 
         /* =================================================
-           ON-HAND CASH
+           ON-HAND CASH / DATONG WALLET
 
            GET /api/member-finance/cash
+           PUT /api/member-finance/cash
         ================================================= */
 
         Route::get(
@@ -106,6 +105,14 @@ Route::middleware(
             [
                 MemberFinanceController::class,
                 'cash',
+            ]
+        );
+
+        Route::put(
+            '/cash',
+            [
+                MemberFinanceController::class,
+                'updateCash',
             ]
         );
 

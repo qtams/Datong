@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+
+import { createPortal } from "react-dom";
 
 import {
   ArrowLeftRight,
@@ -9,7 +11,7 @@ import {
   X,
 } from "lucide-react";
 
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 
 import ModalShell from "./ModalShell";
 
@@ -49,10 +51,7 @@ function normalizeMoneyInput(value) {
 }
 
 /* =========================================================
-   CREDIT CARD FONT
-
-   Same font + id as the other card screens, so the
-   stylesheet is only ever added once.
+   CARD FONT
 ========================================================= */
 
 const CARD_FONT_ID = "member-card-font";
@@ -76,11 +75,6 @@ const CARD_TEXT_STYLE = {
 
 /* =========================================================
    ACCOUNT OPTION
-
-   Card-shaped tile. Image only (no border, no container,
-   no shadow). Selected = check badge, others dim.
-
-   `fixed` = non-interactive tile (the on-hand destination).
 ========================================================= */
 
 function AccountOption({
@@ -92,22 +86,15 @@ function AccountOption({
   invalid = false,
   onClick,
 }) {
-  const isCash = account.type === "cash";
+  if (!account) {
+    return null;
+  }
 
-  /*
-   * Savings cards use their provider artwork.
-   * The on-hand cash tile uses the Datong wallet image.
-   */
+  const isCash = account?.type === "cash";
 
-  const cardImage = isCash
-    ? datongWallet
-    : account.type === "card"
-      ? account.image
-      : "";
+  const cardImage = isCash ? datongWallet : account?.image || "";
 
-  /* Live balance (typing in the amount updates this in real time) */
-
-  const shownBalance = balanceOverride ?? account.balance;
+  const shownBalance = balanceOverride ?? account?.balance ?? 0;
 
   const maskStyle = cardImage
     ? {
@@ -140,8 +127,10 @@ function AccountOption({
         }
       }}
       aria-pressed={fixed ? undefined : selected}
-      aria-label={`${account.name}, ${formatPeso(account.balance)}`}
-      title={account.name}
+      aria-label={`${account?.name || "Account"}, ${formatPeso(
+        account?.balance,
+      )}`}
+      title={account?.name || "Account"}
       className={`
         group
 
@@ -149,8 +138,6 @@ function AccountOption({
 
         w-full
         shrink-0
-
-        snap-start
 
         rounded-[14px]
 
@@ -171,15 +158,17 @@ function AccountOption({
           disabled
             ? "cursor-not-allowed opacity-30 grayscale"
             : selected
-              ? "scale-[1.02] opacity-100"
-              : "opacity-60 hover:opacity-100 active:scale-[0.98]"
+              ? "opacity-100"
+              : "opacity-100 hover:opacity-90 active:scale-[0.98]"
         }
       `}
       style={{
         aspectRatio: "1.586 / 1",
       }}
     >
-      {/* ART */}
+      {/* =================================================
+          ART
+      ================================================= */}
 
       {cardImage ? (
         <img
@@ -216,44 +205,43 @@ function AccountOption({
             text-white
           "
         >
-          {account.type === "cash" ? (
+          {isCash ? (
             <Banknote
               size={18}
               strokeWidth={1.4}
-              className="absolute left-[8%] top-[12%] text-white/80"
+              className="
+                absolute
+                left-[8%]
+                top-[12%]
+
+                text-white/80
+              "
             />
           ) : (
             <WalletCards
               size={18}
               strokeWidth={1.4}
-              className="absolute left-[8%] top-[12%] text-white/80"
+              className="
+                absolute
+                left-[8%]
+                top-[12%]
+
+                text-white/80
+              "
             />
           )}
-
-          <div
-            aria-hidden="true"
-            className="
-              absolute
-              -right-6
-              -top-6
-
-              h-24
-              w-24
-
-              rounded-full
-
-              bg-white/5
-            "
-          />
         </div>
       )}
 
-      {/* READABILITY GRADIENT (masked to the card art) */}
+      {/* =================================================
+          GRADIENT
+      ================================================= */}
 
       <div
         aria-hidden="true"
         className="
           pointer-events-none
+
           absolute
           inset-0
 
@@ -267,7 +255,9 @@ function AccountOption({
         }}
       />
 
-      {/* NAME + BALANCE */}
+      {/* =================================================
+          NAME + BALANCE
+      ================================================= */}
 
       <div
         className={`
@@ -278,9 +268,9 @@ function AccountOption({
           bottom-[8%]
           right-[7%]
 
-          sm:bottom-[10%]
-
           z-10
+
+          sm:bottom-[10%]
 
           ${isCash ? "left-[14%]" : "left-[7%]"}
         `}
@@ -295,6 +285,7 @@ function AccountOption({
             uppercase
             leading-none
             tracking-[0.1em]
+
             text-white
 
             sm:text-[11px]
@@ -302,7 +293,7 @@ function AccountOption({
             sm:tracking-[0.12em]
           "
         >
-          {account.name}
+          {account?.name || "Account"}
         </p>
 
         <motion.p
@@ -335,31 +326,855 @@ function AccountOption({
             font-normal
             leading-none
             tracking-[0.06em]
+
             text-white
 
             sm:mt-1.5
             sm:text-[15px]
             sm:leading-normal
-            sm:tracking-[0.08em]
           "
         >
           {formatPeso(shownBalance)}
         </motion.p>
       </div>
-
-      {/* SELECTED check badge removed (selected = full brightness, others dim) */}
     </button>
   );
 }
 
 /* =========================================================
+   CARD PICKER ITEM
+
+   IMAGE ONLY
+   NO SHADOW
+   NO BORDER
+   NO CONTAINER
+   NO OVERLAY
+========================================================= */
+
+function CardPickerItem({ account, selected = false, onClick }) {
+  return (
+    <motion.button
+      type="button"
+      whileTap={{
+        scale: 0.98,
+      }}
+      onClick={() => {
+        onClick?.(account);
+      }}
+      aria-label={`Select ${account.name}`}
+      aria-pressed={selected}
+      className="
+        relative
+
+        block
+        w-full
+
+        border-0
+
+        bg-transparent
+
+        p-0
+
+        text-left
+
+        outline-none
+
+        shadow-none
+
+        appearance-none
+
+        focus:outline-none
+      "
+      style={{
+        aspectRatio: "1.586 / 1",
+
+        boxShadow: "none",
+
+        filter: "none",
+      }}
+    >
+      {account.image ? (
+        <img
+          src={account.image}
+          alt={account.name}
+          draggable={false}
+          className="
+            block
+
+            h-full
+            w-full
+
+            select-none
+
+            object-cover
+
+            shadow-none
+          "
+          style={{
+            display: "block",
+
+            boxShadow: "none",
+
+            filter: "none",
+
+            WebkitFilter: "none",
+          }}
+        />
+      ) : (
+        <div
+          className="
+            flex
+
+            h-full
+            w-full
+
+            items-center
+            justify-center
+
+            bg-black
+
+            text-white
+
+            shadow-none
+          "
+          style={{
+            boxShadow: "none",
+          }}
+        >
+          <WalletCards size={20} strokeWidth={1.4} />
+        </div>
+      )}
+    </motion.button>
+  );
+}
+
+/* =========================================================
+   EMPTY CARDS
+========================================================= */
+
+function EmptyCards() {
+  return (
+    <div
+      className="
+        flex
+
+        min-h-[240px]
+
+        flex-col
+        items-center
+        justify-center
+
+        px-6
+
+        text-center
+      "
+    >
+      <div
+        className="
+          flex
+          h-11
+          w-11
+
+          items-center
+          justify-center
+
+          rounded-full
+
+          bg-gray-100
+
+          text-gray-400
+        "
+      >
+        <WalletCards size={19} strokeWidth={1.5} />
+      </div>
+
+      <p
+        className="
+          mt-3
+
+          text-[11px]
+          font-medium
+          text-gray-700
+        "
+      >
+        No savings cards
+      </p>
+
+      <p
+        className="
+          mt-1
+
+          text-[9px]
+          text-gray-400
+        "
+      >
+        Add a savings card first.
+      </p>
+    </div>
+  );
+}
+
+/* =========================================================
+   DESTINATION CARD PICKER
+
+   MOBILE
+   -> Bottom sheet
+
+   DESKTOP
+   -> Separate centered modal
+========================================================= */
+
+function DestinationCardPicker({
+  cards,
+  selectedAccount,
+  selectedBalanceOverride = null,
+  open,
+  onToggle,
+  onClose,
+  onSelect,
+}) {
+  const selectionModalRef = useRef(null);
+
+  /* =======================================================
+     ESCAPE
+  ======================================================= */
+
+  useEffect(() => {
+    if (!open) {
+      return undefined;
+    }
+
+    const handleEscape = (event) => {
+      if (event.key !== "Escape") {
+        return;
+      }
+
+      event.preventDefault();
+
+      event.stopPropagation();
+
+      event.stopImmediatePropagation();
+
+      onClose?.();
+    };
+
+    document.addEventListener("keydown", handleEscape, true);
+
+    return () => {
+      document.removeEventListener("keydown", handleEscape, true);
+    };
+  }, [open, onClose]);
+
+  /* =======================================================
+     LOCK BODY
+  ======================================================= */
+
+  useEffect(() => {
+    if (!open || typeof document === "undefined") {
+      return undefined;
+    }
+
+    const previous = document.body.style.overflow;
+
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [open]);
+
+  /* =======================================================
+     CARD SELECTION MODAL
+  ======================================================= */
+
+  const selectionModal =
+    typeof document !== "undefined"
+      ? createPortal(
+          <AnimatePresence>
+            {open && (
+              <motion.div
+                initial={{
+                  opacity: 0,
+                }}
+                animate={{
+                  opacity: 1,
+                }}
+                exit={{
+                  opacity: 0,
+                }}
+                transition={{
+                  duration: 0.15,
+                }}
+                className="
+                  fixed
+                  inset-0
+
+                  z-[10050]
+
+                  flex
+                  items-end
+                  justify-center
+
+                  sm:items-center
+                  sm:p-6
+                "
+              >
+                {/* =========================================
+                    BACKDROP
+                ========================================= */}
+
+                <motion.button
+                  type="button"
+                  aria-label="Close card selection"
+                  onClick={onClose}
+                  initial={{
+                    opacity: 0,
+                  }}
+                  animate={{
+                    opacity: 1,
+                  }}
+                  exit={{
+                    opacity: 0,
+                  }}
+                  className="
+                    absolute
+                    inset-0
+
+                    cursor-default
+
+                    border-0
+
+                    bg-black/40
+
+                    p-0
+
+                    backdrop-blur-[2px]
+                  "
+                />
+
+                {/* =========================================
+                    MOBILE BOTTOM SHEET
+                ========================================= */}
+
+                <motion.div
+                  ref={selectionModalRef}
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label="Choose a card"
+                  initial={{
+                    y: "100%",
+                  }}
+                  animate={{
+                    y: 0,
+                  }}
+                  exit={{
+                    y: "100%",
+                  }}
+                  transition={{
+                    type: "spring",
+
+                    stiffness: 410,
+
+                    damping: 38,
+
+                    mass: 0.9,
+                  }}
+                  className="
+                    relative
+
+                    z-10
+
+                    flex
+
+                    max-h-[72dvh]
+
+                    w-full
+
+                    flex-col
+
+                    overflow-hidden
+
+                    rounded-t-[26px]
+
+                    border-t
+                    border-gray-200
+
+                    bg-white
+
+                    pb-[max(env(safe-area-inset-bottom),12px)]
+
+                    shadow-[0_-24px_70px_rgba(0,0,0,0.18)]
+
+                    sm:hidden
+                  "
+                >
+                  {/* HANDLE */}
+
+                  <div
+                    className="
+                      flex
+                      h-8
+                      shrink-0
+                      items-center
+                      justify-center
+                    "
+                  >
+                    <div
+                      className="
+                        h-1
+                        w-10
+
+                        rounded-full
+
+                        bg-gray-300
+                      "
+                    />
+                  </div>
+
+                  {/* HEADER */}
+
+                  <div
+                    className="
+                      flex
+                      shrink-0
+                      items-start
+                      justify-between
+                      gap-4
+
+                      border-b
+                      border-gray-100
+
+                      px-5
+                      pb-4
+                      pt-1
+                    "
+                  >
+                    <div
+                      className="
+                        min-w-0
+                      "
+                    >
+                      <h3
+                        className="
+                          text-[15px]
+                          font-semibold
+                          tracking-[-0.02em]
+                          text-gray-950
+                        "
+                      >
+                        Choose a card
+                      </h3>
+
+                      <p
+                        className="
+                          mt-1
+
+                          text-[9px]
+                          leading-4
+                          text-gray-400
+                        "
+                      >
+                        Select where you want to transfer the money.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      aria-label="Close card selection"
+                      className="
+                        flex
+                        h-8
+                        w-8
+
+                        shrink-0
+
+                        items-center
+                        justify-center
+
+                        rounded-full
+
+                        bg-gray-100
+
+                        text-gray-500
+
+                        active:bg-gray-200
+                      "
+                    >
+                      <X size={14} strokeWidth={1.7} />
+                    </button>
+                  </div>
+
+                  {/* MOBILE SCROLL */}
+
+                  <div
+                    className="
+                      min-h-0
+                      flex-1
+
+                      overflow-y-auto
+                      overscroll-contain
+
+                      px-4
+                      py-4
+
+                      [scrollbar-width:thin]
+
+                      [-webkit-overflow-scrolling:touch]
+                    "
+                  >
+                    {cards.length > 0 ? (
+                      <div
+                        className="
+                          grid
+                          grid-cols-2
+
+                          items-start
+
+                          gap-x-4
+                          gap-y-4
+
+                          pb-3
+                        "
+                      >
+                        {cards.map((account) => (
+                          <CardPickerItem
+                            key={account.key}
+                            account={account}
+                            selected={selectedAccount?.key === account.key}
+                            onClick={(selected) => {
+                              onSelect?.(selected);
+                            }}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <EmptyCards />
+                    )}
+                  </div>
+                </motion.div>
+
+                {/* =========================================
+                    DESKTOP MODAL
+                ========================================= */}
+
+                <motion.div
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label="Choose a card"
+                  initial={{
+                    opacity: 0,
+                    y: 10,
+                    scale: 0.97,
+                  }}
+                  animate={{
+                    opacity: 1,
+                    y: 0,
+                    scale: 1,
+                  }}
+                  exit={{
+                    opacity: 0,
+                    y: 8,
+                    scale: 0.98,
+                  }}
+                  transition={{
+                    duration: 0.17,
+
+                    ease: "easeOut",
+                  }}
+                  className="
+                    relative
+
+                    z-10
+
+                    hidden
+
+                    w-full
+                    max-w-[720px]
+
+                    flex-col
+
+                    overflow-hidden
+
+                    rounded-[22px]
+
+                    border
+                    border-gray-200
+
+                    bg-white
+
+                    shadow-[0_30px_100px_rgba(0,0,0,0.25)]
+
+                    sm:flex
+
+                    max-h-[78vh]
+                  "
+                >
+                  {/* DESKTOP HEADER */}
+
+                  <div
+                    className="
+                      flex
+                      shrink-0
+                      items-start
+                      justify-between
+                      gap-4
+
+                      border-b
+                      border-gray-100
+
+                      px-6
+                      py-5
+                    "
+                  >
+                    <div
+                      className="
+                        flex
+                        items-center
+                        gap-3
+                      "
+                    >
+                      <div
+                        className="
+                          flex
+                          h-9
+                          w-9
+
+                          items-center
+                          justify-center
+
+                          rounded-xl
+
+                          bg-black
+                          text-white
+                        "
+                      >
+                        <WalletCards size={15} strokeWidth={1.7} />
+                      </div>
+
+                      <div>
+                        <h3
+                          className="
+                            text-[13px]
+                            font-semibold
+                            text-gray-950
+                          "
+                        >
+                          Choose a card
+                        </h3>
+
+                        <p
+                          className="
+                            mt-0.5
+
+                            text-[9px]
+                            text-gray-400
+                          "
+                        >
+                          Select where you want to transfer the money.
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      aria-label="Close card selection"
+                      className="
+                        flex
+                        h-8
+                        w-8
+
+                        shrink-0
+
+                        items-center
+                        justify-center
+
+                        rounded-lg
+
+                        text-gray-400
+
+                        transition-colors
+
+                        hover:bg-gray-100
+                        hover:text-black
+                      "
+                    >
+                      <X size={15} />
+                    </button>
+                  </div>
+
+                  {/* DESKTOP CARD SCROLL */}
+
+                  <div
+                    className="
+                      min-h-0
+                      flex-1
+
+                      overflow-y-auto
+                      overscroll-contain
+
+                      px-6
+                      py-6
+
+                      [scrollbar-width:thin]
+                    "
+                  >
+                    {cards.length > 0 ? (
+                      <div
+                        className="
+                          grid
+                          grid-cols-2
+
+                          items-start
+
+                          gap-x-5
+                          gap-y-5
+
+                          lg:grid-cols-3
+                        "
+                      >
+                        {cards.map((account) => (
+                          <CardPickerItem
+                            key={account.key}
+                            account={account}
+                            selected={selectedAccount?.key === account.key}
+                            onClick={(selected) => {
+                              onSelect?.(selected);
+                            }}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <EmptyCards />
+                    )}
+                  </div>
+
+                  {/* DESKTOP FOOTER */}
+
+                  <div
+                    className="
+                      flex
+                      shrink-0
+                      items-center
+                      justify-between
+
+                      border-t
+                      border-gray-100
+
+                      bg-gray-50/50
+
+                      px-6
+                      py-3
+                    "
+                  >
+                    <p
+                      className="
+                        text-[8px]
+                        text-gray-400
+                      "
+                    >
+                      {cards.length} {cards.length === 1 ? "card" : "cards"}{" "}
+                      available
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      className="
+                        h-9
+
+                        rounded-lg
+
+                        border
+                        border-gray-200
+
+                        bg-white
+
+                        px-4
+
+                        text-[9px]
+                        font-medium
+                        text-gray-600
+
+                        hover:bg-gray-50
+                      "
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body,
+        )
+      : null;
+
+  return (
+    <>
+      {/* =================================================
+          DESTINATION FIELD
+      ================================================= */}
+
+      <div
+        className="
+          relative
+
+          py-1.5
+        "
+      >
+        {selectedAccount ? (
+          <AccountOption
+            account={selectedAccount}
+            selected
+            balanceOverride={selectedBalanceOverride}
+            onClick={onToggle}
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-label="Choose destination card"
+            title="Choose destination card"
+            className="
+              relative
+
+              w-full
+
+              rounded-[14px]
+
+              border
+              border-gray-300
+
+              bg-gray-200/70
+
+              outline-none
+
+              transition-all
+
+              hover:bg-gray-200
+
+              active:scale-[0.98]
+
+              focus-visible:ring-2
+              focus-visible:ring-black/40
+              focus-visible:ring-offset-2
+            "
+            style={{
+              aspectRatio: "1.586 / 1",
+            }}
+          />
+        )}
+      </div>
+
+      {selectionModal}
+    </>
+  );
+}
+
+/* =========================================================
    TRANSFER MONEY MODAL
-
-   ONE direction only:
-
-     Savings card  ->  On-hand cash
-
-   (On-hand cash -> savings card is not allowed.)
 ========================================================= */
 
 function TransferMoneyModal({
@@ -371,7 +1186,9 @@ function TransferMoneyModal({
   onSubmit,
   submitting = false,
 }) {
-  const [fromKey, setFromKey] = useState("");
+  const [selectedCardKey, setSelectedCardKey] = useState("");
+
+  const [destinationPickerOpen, setDestinationPickerOpen] = useState(false);
 
   const [amount, setAmount] = useState("");
 
@@ -380,7 +1197,13 @@ function TransferMoneyModal({
   const [error, setError] = useState("");
 
   /* =======================================================
-     CARD FONT
+     DIRECTION
+  ======================================================= */
+
+  const cashToCard = initialSource?.type === "cash";
+
+  /* =======================================================
+     FONT
   ======================================================= */
 
   useEffect(() => {
@@ -404,10 +1227,10 @@ function TransferMoneyModal({
   }, []);
 
   /* =======================================================
-     SOURCES (savings cards only)
+     CARD ACCOUNTS
   ======================================================= */
 
-  const sources = useMemo(
+  const cardAccounts = useMemo(
     () =>
       cards.map((card) => ({
         key: `card-${card.id}`,
@@ -416,42 +1239,41 @@ function TransferMoneyModal({
 
         type: "card",
 
-        name: card.name,
-
-        subtitle: card.provider?.name || "Savings",
+        name: card.name || card.provider?.name || "Savings",
 
         balance: card.balance || "0.00",
 
-        image: card.provider?.landscape_image_url || "",
+        image:
+          card.provider?.landscape_image_url ||
+          card.provider?.portrait_image_url ||
+          "",
       })),
     [cards],
   );
 
   /* =======================================================
-     DESTINATION (on-hand cash, fixed)
+     WALLET ACCOUNT
   ======================================================= */
 
-  const destination = useMemo(
+  const walletAccount = useMemo(
     () => ({
       key: "cash",
 
-      id: cashAccount?.id || null,
+      id: cashAccount?.id ?? null,
 
       type: "cash",
 
-      name: cashAccount?.name || "On-hand Cash",
-
-      subtitle: "Actual Money",
+      name: "Datong Wallet",
 
       balance: cashAccount?.balance || "0.00",
 
       image: "",
     }),
-    [cashAccount],
+    [cashAccount?.id, cashAccount?.balance],
   );
 
   /* =======================================================
-     INITIALIZE
+     RESET
   ======================================================= */
 
   useEffect(() => {
@@ -465,56 +1287,89 @@ function TransferMoneyModal({
 
     setError("");
 
-    let sourceKey = "";
+    setDestinationPickerOpen(false);
 
-    /*
-     * Only a savings card can be the source.
-     * If the modal was opened with anything else,
-     * fall back to the first card that has money.
-     */
+    /* =====================================================
+       WALLET -> CARD
+       START BLANK
+    ===================================================== */
 
-    if (initialSource?.id && initialSource?.type !== "cash") {
-      sourceKey = `card-${initialSource.id}`;
+    if (cashToCard) {
+      setSelectedCardKey("");
+
+      return;
     }
 
-    if (!sourceKey || !sources.some((account) => account.key === sourceKey)) {
-      sourceKey =
-        sources.find((account) => Number(account.balance) > 0)?.key ||
-        sources[0]?.key ||
-        "";
+    /* =====================================================
+       CARD -> WALLET
+       USE CLICKED CARD
+    ===================================================== */
+
+    if (initialSource?.id) {
+      setSelectedCardKey(`card-${initialSource.id}`);
+
+      return;
     }
 
-    setFromKey(sourceKey);
-  }, [open, initialSource, sources]);
+    setSelectedCardKey("");
+  }, [open, cashToCard, initialSource?.id]);
 
   /* =======================================================
-     CURRENT SOURCE
+     SELECTED CARD
   ======================================================= */
 
-  const fromAccount =
-    sources.find((account) => account.key === fromKey) || null;
-
-  const toAccount = destination;
+  const selectedCardFromList =
+    cardAccounts.find((account) => account.key === selectedCardKey) || null;
 
   /* =======================================================
-     CHANGE SOURCE
+     CARD -> WALLET FALLBACK
   ======================================================= */
 
-  const handleFromChange = (account) => {
-    setFromKey(account.key);
+  const clickedSourceFallback = useMemo(() => {
+    if (cashToCard || !initialSource || !initialSource?.id) {
+      return null;
+    }
+
+    return {
+      key: `card-${initialSource.id}`,
+
+      id: initialSource.id,
+
+      type: "card",
+
+      name: initialSource.name || initialSource.provider?.name || "Savings",
+
+      balance: initialSource.balance || "0.00",
+
+      image:
+        initialSource.provider?.landscape_image_url ||
+        initialSource.provider?.portrait_image_url ||
+        "",
+    };
+  }, [cashToCard, initialSource]);
+
+  const selectedCard = cashToCard
+    ? selectedCardFromList
+    : selectedCardFromList || clickedSourceFallback;
+
+  /* =======================================================
+     FROM / TO
+  ======================================================= */
+
+  const fromAccount = cashToCard ? walletAccount : selectedCard;
+
+  const toAccount = cashToCard ? selectedCard : walletAccount;
+
+  /* =======================================================
+     SELECT DESTINATION CARD
+  ======================================================= */
+
+  const handleCardChange = (account) => {
+    setSelectedCardKey(account.key);
+
+    setDestinationPickerOpen(false);
 
     setError("");
-
-    /*
-     * Never keep an amount that is higher than the
-     * newly selected card can afford.
-     */
-
-    const nextBalance = Number(account.balance || 0);
-
-    if (amount !== "" && Number(amount) > nextBalance) {
-      setAmount(nextBalance > 0 ? nextBalance.toFixed(2) : "");
-    }
   };
 
   /* =======================================================
@@ -534,7 +1389,7 @@ function TransferMoneyModal({
   };
 
   /* =======================================================
-     QUICK PERCENT
+     PERCENT
   ======================================================= */
 
   const handlePercent = (percent) => {
@@ -550,14 +1405,52 @@ function TransferMoneyModal({
   };
 
   /* =======================================================
+     PREVIEW
+  ======================================================= */
+
+  const numericPreview = Number(amount);
+
+  const previewValid = Number.isFinite(numericPreview) && numericPreview > 0;
+
+  const fromAfter = fromAccount
+    ? Number(fromAccount.balance || 0) - (previewValid ? numericPreview : 0)
+    : 0;
+
+  const toAfter = toAccount
+    ? Number(toAccount.balance || 0) + (previewValid ? numericPreview : 0)
+    : 0;
+
+  const overBalance = Boolean(fromAccount) && previewValid && fromAfter < 0;
+
+  const hasBalance = Number(fromAccount?.balance || 0) > 0;
+
+  const noCards = cardAccounts.length === 0;
+
+  const canEnterAmount = !noCards && Boolean(fromAccount) && Boolean(toAccount);
+
+  /* =======================================================
      SUBMIT
   ======================================================= */
 
   const handleSubmit = (event) => {
     event.preventDefault();
 
-    if (!fromAccount) {
-      setError("Select a savings card.");
+    if (noCards) {
+      setError("Add a savings card first.");
+
+      return;
+    }
+
+    if (cashToCard && !selectedCard) {
+      setError("Select the card you want to transfer money to.");
+
+      setDestinationPickerOpen(true);
+
+      return;
+    }
+
+    if (!fromAccount || !toAccount) {
+      setError("Select an account.");
 
       return;
     }
@@ -581,40 +1474,19 @@ function TransferMoneyModal({
     setError("");
 
     onSubmit?.({
-      from_type: "card",
+      from_type: fromAccount.type,
 
-      from_id: fromAccount.id,
+      from_id: fromAccount.type === "card" ? fromAccount.id : null,
 
-      to_type: "cash",
+      to_type: toAccount.type,
 
-      to_id: null,
+      to_id: toAccount.type === "card" ? toAccount.id : null,
 
       amount,
 
       note: note.trim() || null,
     });
   };
-
-  /* =======================================================
-     PREVIEW NUMBERS
-  ======================================================= */
-
-  const numericPreview = Number(amount);
-
-  const previewValid = Number.isFinite(numericPreview) && numericPreview > 0;
-
-  const fromAfter = fromAccount
-    ? Number(fromAccount.balance || 0) - (previewValid ? numericPreview : 0)
-    : 0;
-
-  const toAfter =
-    Number(toAccount.balance || 0) + (previewValid ? numericPreview : 0);
-
-  const overBalance = Boolean(fromAccount) && previewValid && fromAfter < 0;
-
-  const hasBalance = Number(fromAccount?.balance || 0) > 0;
-
-  const noCards = sources.length === 0;
 
   if (!open) {
     return null;
@@ -626,6 +1498,12 @@ function TransferMoneyModal({
       size="max-w-[640px]"
       labelledBy="transfer-money-title"
       onClose={() => {
+        if (destinationPickerOpen) {
+          setDestinationPickerOpen(false);
+
+          return;
+        }
+
         if (!submitting) {
           onClose?.();
         }
@@ -668,6 +1546,7 @@ function TransferMoneyModal({
               flex
               h-9
               w-9
+
               items-center
               justify-center
 
@@ -695,11 +1574,14 @@ function TransferMoneyModal({
             <p
               className="
                 mt-0.5
+
                 text-[8px]
                 text-gray-400
               "
             >
-              Move money from your savings to your on-hand cash.
+              {cashToCard
+                ? "Move money from your wallet into a savings card."
+                : "Move money from a savings card into your wallet."}
             </p>
           </div>
         </div>
@@ -713,6 +1595,7 @@ function TransferMoneyModal({
             flex
             h-8
             w-8
+
             items-center
             justify-center
 
@@ -734,103 +1617,48 @@ function TransferMoneyModal({
         <div
           className="
             p-4
+
             sm:px-6
             sm:py-5
           "
         >
           {/* =================================================
-              FROM  ->  TO   (side by side, no labels)
-
-              Both cards fill their half and update in real
-              time while typing: the savings card goes down,
-              on-hand goes up.
+              ACCOUNTS
           ================================================= */}
 
-          <div className="flex items-center justify-center gap-2 sm:gap-3">
-            {/* FROM (savings cards only) */}
+          <div
+            className="
+              flex
+              items-center
+              justify-center
+
+              gap-2
+
+              sm:gap-3
+            "
+          >
+            {/* FROM */}
 
             <div
-              role="group"
-              aria-label="From savings card"
-              className="min-w-0 max-w-[300px] flex-1"
+              className="
+                min-w-0
+                max-w-[300px]
+                flex-1
+              "
             >
-              {noCards ? (
-                <div
-                  className="
-                    rounded-xl
-
-                    border
-                    border-dashed
-                    border-gray-300
-
-                    px-5
-                    py-8
-
-                    text-center
-                  "
-                >
-                  <WalletCards size={20} className="mx-auto text-gray-300" />
-
-                  <p
-                    className="
-                      mt-3
-                      text-[10px]
-                      font-medium
-                      text-gray-500
-                    "
-                  >
-                    No savings cards yet
-                  </p>
-
-                  <p
-                    className="
-                      mt-1
-                      text-[8px]
-                      text-gray-400
-                    "
-                  >
-                    Add a savings card first to transfer money.
-                  </p>
-                </div>
-              ) : (
-                <div
-                  className="
-                    -mx-1
-
-                    flex
-                    gap-3
-
-                    snap-x
-                    snap-mandatory
-
-                    overflow-x-auto
-                    overscroll-x-contain
-
-                    px-1
-                    py-1.5
-
-                    [scrollbar-width:none]
-                    [&::-webkit-scrollbar]:hidden
-                  "
-                >
-                  {sources.map((account) => {
-                    const isSelected = fromKey === account.key;
-
-                    return (
-                      <AccountOption
-                        key={account.key}
-                        account={account}
-                        selected={isSelected}
-                        balanceOverride={
-                          isSelected && previewValid ? fromAfter : null
-                        }
-                        invalid={isSelected && overBalance}
-                        onClick={handleFromChange}
-                      />
-                    );
-                  })}
-                </div>
-              )}
+              <div
+                className="
+                  py-1.5
+                "
+              >
+                <AccountOption
+                  account={cashToCard ? walletAccount : selectedCard}
+                  selected
+                  fixed
+                  invalid={overBalance}
+                  balanceOverride={previewValid ? fromAfter : null}
+                />
+              </div>
             </div>
 
             {/* ARROW */}
@@ -847,6 +1675,7 @@ function TransferMoneyModal({
                   flex
                   h-7
                   w-7
+
                   items-center
                   justify-center
 
@@ -864,29 +1693,85 @@ function TransferMoneyModal({
               </div>
             </div>
 
-            {/* TO (on-hand cash, fixed) */}
+            {/* TO */}
 
             <div
-              role="group"
-              aria-label="To on-hand cash"
-              className="min-w-0 max-w-[300px] flex-1"
+              className="
+                min-w-0
+                max-w-[300px]
+                flex-1
+              "
             >
-              <div className="py-1.5">
-                <AccountOption
-                  account={toAccount}
-                  selected
-                  fixed
-                  balanceOverride={previewValid ? toAfter : null}
+              {cashToCard ? (
+                <DestinationCardPicker
+                  cards={cardAccounts}
+                  selectedAccount={selectedCard}
+                  selectedBalanceOverride={previewValid ? toAfter : null}
+                  open={destinationPickerOpen}
+                  onToggle={() => {
+                    setDestinationPickerOpen((current) => !current);
+                  }}
+                  onClose={() => {
+                    setDestinationPickerOpen(false);
+                  }}
+                  onSelect={handleCardChange}
                 />
-              </div>
+              ) : (
+                <div
+                  className="
+                    py-1.5
+                  "
+                >
+                  <AccountOption
+                    account={walletAccount}
+                    selected
+                    fixed
+                    balanceOverride={previewValid ? toAfter : null}
+                  />
+                </div>
+              )}
             </div>
+          </div>
+
+          {/* =================================================
+              DIRECTION
+          ================================================= */}
+
+          <div
+            className="
+              mt-3
+
+              flex
+              justify-center
+            "
+          >
+            <span
+              className="
+                rounded-full
+
+                bg-gray-100
+
+                px-3
+                py-1
+
+                text-[8px]
+                font-medium
+                text-gray-500
+              "
+            >
+              {cashToCard ? "Wallet → Savings" : "Savings → Wallet"}
+            </span>
           </div>
 
           {/* =================================================
               AMOUNT
           ================================================= */}
 
-          <div className="mt-5">
+          <div
+            className="
+              mt-5
+            "
+          >
             <div
               className="
                 mb-1.5
@@ -907,16 +1792,27 @@ function TransferMoneyModal({
                 Amount
               </label>
 
-              <div className="flex items-center gap-3">
+              <div
+                className="
+                  flex
+                  items-center
+                  gap-3
+                "
+              >
                 {fromAccount && (
-                  <span className="text-[8px] text-gray-400">
+                  <span
+                    className="
+                      text-[8px]
+                      text-gray-400
+                    "
+                  >
                     Available {formatPeso(fromAccount.balance)}
                   </span>
                 )}
 
                 <button
                   type="button"
-                  disabled={!fromAccount || !hasBalance}
+                  disabled={!hasBalance || !canEnterAmount}
                   onClick={handleMax}
                   className="
                     text-[8px]
@@ -925,6 +1821,7 @@ function TransferMoneyModal({
 
                     hover:text-black
 
+                    disabled:cursor-not-allowed
                     disabled:opacity-40
                   "
                 >
@@ -933,13 +1830,18 @@ function TransferMoneyModal({
               </div>
             </div>
 
-            <div className="relative">
+            <div
+              className="
+                relative
+              "
+            >
               <span
                 style={CARD_FONT_STYLE}
                 className="
                   absolute
                   left-3.5
                   top-1/2
+
                   -translate-y-1/2
 
                   text-[18px]
@@ -955,16 +1857,11 @@ function TransferMoneyModal({
                 inputMode="decimal"
                 autoComplete="off"
                 value={amount}
-                disabled={noCards}
+                disabled={!canEnterAmount}
                 onChange={(event) => {
                   const next = normalizeMoneyInput(event.target.value);
 
                   const max = Number(fromAccount?.balance || 0);
-
-                  /*
-                   * VALIDATION: the amount can never exceed the
-                   * selected savings card's balance.
-                   */
 
                   if (next !== "" && Number(next) > max) {
                     setAmount(max > 0 ? max.toFixed(2) : "");
@@ -972,7 +1869,7 @@ function TransferMoneyModal({
                     setError(
                       max > 0
                         ? `You can transfer up to ${formatPeso(max)}.`
-                        : "This card has no available balance.",
+                        : "This account has no available balance.",
                     );
 
                     return;
@@ -982,7 +1879,9 @@ function TransferMoneyModal({
 
                   setError("");
                 }}
-                placeholder="0.00"
+                placeholder={
+                  cashToCard && !selectedCard ? "Select a card first" : "0.00"
+                }
                 aria-invalid={Boolean(error)}
                 style={CARD_FONT_STYLE}
                 className={`
@@ -1008,6 +1907,7 @@ function TransferMoneyModal({
 
                   placeholder:text-gray-300
 
+                  disabled:cursor-not-allowed
                   disabled:bg-gray-50
 
                   ${
@@ -1019,7 +1919,9 @@ function TransferMoneyModal({
               />
             </div>
 
-            {/* QUICK AMOUNTS */}
+            {/* =================================================
+                QUICK
+            ================================================= */}
 
             <div
               className="
@@ -1034,30 +1936,28 @@ function TransferMoneyModal({
                 <button
                   key={percent}
                   type="button"
-                  disabled={!fromAccount || !hasBalance}
+                  disabled={!hasBalance || !canEnterAmount}
                   onClick={() => handlePercent(percent)}
                   className="
-                    h-7
+                      h-7
 
-                    rounded-full
+                      rounded-full
 
-                    border
-                    border-gray-200
+                      border
+                      border-gray-200
 
-                    px-3
+                      px-3
 
-                    text-[8px]
-                    font-medium
-                    text-gray-500
+                      text-[8px]
+                      font-medium
+                      text-gray-500
 
-                    transition-colors
+                      hover:bg-gray-50
+                      hover:text-black
 
-                    hover:border-gray-300
-                    hover:bg-gray-50
-                    hover:text-black
-
-                    disabled:opacity-40
-                  "
+                      disabled:cursor-not-allowed
+                      disabled:opacity-40
+                    "
                 >
                   {percent}%
                 </button>
@@ -1065,7 +1965,7 @@ function TransferMoneyModal({
 
               <button
                 type="button"
-                disabled={!fromAccount || !hasBalance}
+                disabled={!hasBalance || !canEnterAmount}
                 onClick={handleMax}
                 className="
                   h-7
@@ -1081,12 +1981,10 @@ function TransferMoneyModal({
                   font-medium
                   text-gray-500
 
-                  transition-colors
-
-                  hover:border-gray-300
                   hover:bg-gray-50
                   hover:text-black
 
+                  disabled:cursor-not-allowed
                   disabled:opacity-40
                 "
               >
@@ -1094,24 +1992,29 @@ function TransferMoneyModal({
               </button>
             </div>
 
-            <div aria-live="polite">
-              {error && (
-                <p
-                  className="
-                    mt-1.5
-                    text-[9px]
-                    text-red-500
-                  "
-                >
-                  {error}
-                </p>
-              )}
-            </div>
+            {error && (
+              <p
+                className="
+                  mt-1.5
+
+                  text-[9px]
+                  text-red-500
+                "
+              >
+                {error}
+              </p>
+            )}
           </div>
 
-          {/* NOTE */}
+          {/* =================================================
+              NOTE
+          ================================================= */}
 
-          <div className="mt-4">
+          <div
+            className="
+              mt-4
+            "
+          >
             <label
               htmlFor="transfer-note"
               className="
@@ -1123,7 +2026,14 @@ function TransferMoneyModal({
                 text-gray-700
               "
             >
-              Note <span className="text-gray-400">(optional)</span>
+              Note{" "}
+              <span
+                className="
+                  text-gray-400
+                "
+              >
+                (optional)
+              </span>
             </label>
 
             <input
@@ -1131,7 +2041,11 @@ function TransferMoneyModal({
               value={note}
               maxLength={255}
               onChange={(event) => setNote(event.target.value)}
-              placeholder="Example: Withdraw for daily expenses"
+              placeholder={
+                cashToCard
+                  ? "Example: Move cash into savings"
+                  : "Example: Withdraw for daily expenses"
+              }
               className="
                 h-10
                 w-full
@@ -1155,8 +2069,6 @@ function TransferMoneyModal({
               "
             />
           </div>
-
-          {/* PREVIEW removed — the cards above update live. */}
         </div>
 
         {/* =================================================
@@ -1215,11 +2127,19 @@ function TransferMoneyModal({
 
           <button
             type="submit"
-            disabled={submitting || noCards || !previewValid || overBalance}
+            disabled={
+              submitting ||
+              noCards ||
+              !previewValid ||
+              overBalance ||
+              !fromAccount ||
+              !toAccount
+            }
             className="
               flex
               h-9
               min-w-[108px]
+
               items-center
               justify-center
               gap-1.5
@@ -1233,8 +2153,6 @@ function TransferMoneyModal({
               text-[9px]
               font-medium
               text-white
-
-              transition-opacity
 
               hover:opacity-90
 

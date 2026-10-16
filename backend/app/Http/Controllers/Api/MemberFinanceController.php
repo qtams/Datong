@@ -13,6 +13,7 @@ use App\Support\Money;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class MemberFinanceController extends Controller
 {
@@ -32,9 +33,6 @@ class MemberFinanceController extends Controller
 
     /* =========================================================
        CASH ACCOUNT
-
-       Automatically create the member's one on-hand cash
-       account if it does not exist yet.
     ========================================================= */
 
     private function cashAccount(
@@ -59,11 +57,38 @@ class MemberFinanceController extends Controller
     }
 
     /* =========================================================
+       CASH RESPONSE
+    ========================================================= */
+
+    private function cashResponse(
+        MemberCashAccount $cash
+    ): array {
+        return [
+            'id' =>
+                $cash->id,
+
+            'name' =>
+                $cash->name,
+
+            'balance' =>
+                (string) $cash->balance,
+
+            'currency' =>
+                $cash->currency,
+
+            'updated_at' =>
+                $cash
+                    ->updated_at
+                    ?->toISOString(),
+        ];
+    }
+
+    /* =========================================================
        SUMMARY
 
-       Savings     = all member card balances
+       Savings      = all member card balances
        Actual Money = on-hand cash
-       Total Money = savings + actual money
+       Total Money  = savings + actual money
     ========================================================= */
 
     public function summary(
@@ -135,10 +160,6 @@ class MemberFinanceController extends Controller
 
     /* =========================================================
        ACTIVE CARD CATALOG
-
-       Member-facing list of providers.
-
-       Only active catalog cards are returned.
     ========================================================= */
 
     public function cardCatalog(
@@ -159,7 +180,6 @@ class MemberFinanceController extends Controller
                     'slug',
                     'type',
                     'status',
-
                     'landscape_image_url',
                     'portrait_image_url',
                 ]);
@@ -171,7 +191,7 @@ class MemberFinanceController extends Controller
     }
 
     /* =========================================================
-       ON-HAND CASH
+       ON-HAND CASH / DATONG WALLET
     ========================================================= */
 
     public function cash(
@@ -188,19 +208,110 @@ class MemberFinanceController extends Controller
             );
 
         return response()->json([
-            'data' => [
-                'id' =>
-                    $cash->id,
+            'data' =>
+                $this->cashResponse(
+                    $cash
+                ),
+        ]);
+    }
 
-                'name' =>
-                    $cash->name,
+    /* =========================================================
+       UPDATE WALLET BALANCE
 
-                'balance' =>
-                    (string) $cash->balance,
+       This is a MANUAL wallet balance adjustment.
 
-                'currency' =>
-                    $cash->currency,
-            ],
+       Example:
+       {
+           "amount": 15000
+       }
+
+       This SETS the wallet balance to 15000.
+       It does not create a transfer record.
+    ========================================================= */
+
+    public function updateCash(
+        Request $request
+    ): JsonResponse {
+        $member =
+            $this->member(
+                $request
+            );
+
+        $validated =
+            $request->validate([
+                'amount' => [
+                    'required',
+                    'numeric',
+                    'min:0',
+                    'max:9999999999999.99',
+                ],
+            ], [
+                'amount.required' =>
+                    'Wallet balance is required.',
+
+                'amount.numeric' =>
+                    'Wallet balance must be a valid amount.',
+
+                'amount.min' =>
+                    'Wallet balance cannot be negative.',
+            ]);
+
+        $balance =
+            Money::fromCents(
+                Money::toCents(
+                    $validated[
+                        'amount'
+                    ]
+                )
+            );
+
+        $cash =
+            DB::transaction(
+                function () use (
+                    $member,
+                    $balance
+                ) {
+                    /*
+                     * Make sure an account exists before
+                     * requesting the row lock.
+                     */
+
+                    $existing =
+                        $this->cashAccount(
+                            $member
+                        );
+
+                    $cash =
+                        MemberCashAccount::query()
+                            ->where(
+                                'member_id',
+                                $member->id
+                            )
+                            ->whereKey(
+                                $existing->id
+                            )
+                            ->lockForUpdate()
+                            ->firstOrFail();
+
+                    $cash->balance =
+                        $balance;
+
+                    $cash->save();
+
+                    return $cash;
+                }
+            );
+
+        $cash->refresh();
+
+        return response()->json([
+            'message' =>
+                'Wallet balance updated successfully.',
+
+            'data' =>
+                $this->cashResponse(
+                    $cash
+                ),
         ]);
     }
 }

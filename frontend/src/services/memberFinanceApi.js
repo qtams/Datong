@@ -63,10 +63,6 @@ async function request(path, { token = null, headers = {}, ...options } = {}) {
 
 /* =========================================================
    SUMMARY
-
-   Savings
-   Actual Money
-   Total Money
 ========================================================= */
 
 export async function getFinanceSummary() {
@@ -86,12 +82,6 @@ export async function getFinanceSummary() {
 
 /* =========================================================
    PROVIDER CATALOG
-
-   GCash
-   GoTyme
-   Maya
-   Banks
-   etc.
 ========================================================= */
 
 export async function getMemberCardCatalog() {
@@ -116,13 +106,6 @@ export async function getMemberCards() {
 
 /* =========================================================
    ADD MEMBER CARD
-
-   Example:
-   {
-     card_id: 1,
-     name: "My GCash",
-     amount: 15000
-   }
 ========================================================= */
 
 export async function createMemberCard({ card_id, name, amount }) {
@@ -141,10 +124,6 @@ export async function createMemberCard({ card_id, name, amount }) {
 
 /* =========================================================
    UPDATE MEMBER CARD
-
-   Balance cannot be directly changed here.
-
-   Balance changes through transfers.
 ========================================================= */
 
 export async function updateMemberCard(memberCardId, values) {
@@ -159,8 +138,6 @@ export async function updateMemberCard(memberCardId, values) {
 
 /* =========================================================
    DELETE MEMBER CARD
-
-   Backend only allows deletion when balance = 0.
 ========================================================= */
 
 export async function deleteMemberCard(memberCardId) {
@@ -170,12 +147,37 @@ export async function deleteMemberCard(memberCardId) {
 }
 
 /* =========================================================
-   ON-HAND CASH
+   ON-HAND CASH / DATONG WALLET
 ========================================================= */
 
 export async function getCashAccount() {
   const response = await request("/api/member-finance/cash", {
     method: "GET",
+  });
+
+  return response?.data;
+}
+
+/* =========================================================
+   UPDATE WALLET BALANCE
+
+   This SETS the current wallet balance.
+
+   Example:
+
+   updateCashBalance(15000)
+
+   Current wallet becomes:
+   ₱15,000.00
+========================================================= */
+
+export async function updateCashBalance(amount) {
+  const response = await request("/api/member-finance/cash", {
+    method: "PUT",
+
+    body: JSON.stringify({
+      amount,
+    }),
   });
 
   return response?.data;
@@ -196,22 +198,22 @@ export async function getMemberTransfers() {
 /* =========================================================
    CREATE TRANSFER
 
-   Card -> Cash
+   CARD -> WALLET
 
    {
      from_type: "card",
      from_id: 1,
      to_type: "cash",
-     amount: 10000
+     amount: 1000
    }
 
-   Cash -> Card
+   WALLET -> CARD
 
    {
      from_type: "cash",
      to_type: "card",
      to_id: 1,
-     amount: 5000
+     amount: 1000
    }
 ========================================================= */
 

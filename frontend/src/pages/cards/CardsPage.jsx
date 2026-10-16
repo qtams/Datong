@@ -15,6 +15,7 @@ import toast from "react-hot-toast";
 
 import AddMemberCardModal from "../../components/modals/AddMemberCardModal";
 import TransferMoneyModal from "../../components/modals/TransferMoneyModal";
+import WalletBalanceModal from "../../components/modals/WalletBalanceModal";
 
 import datongWallet from "../../assets/datong_wallet.webp";
 
@@ -26,6 +27,7 @@ import {
   getFinanceSummary,
   getMemberCardCatalog,
   getMemberCards,
+  updateCashBalance,
 } from "../../services/memberFinanceApi";
 
 import { confirmDelete } from "../../utils/sweetAlert";
@@ -39,6 +41,7 @@ function formatPeso(value) {
 
   return new Intl.NumberFormat("en-PH", {
     style: "currency",
+
     currency: "PHP",
 
     minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
@@ -70,10 +73,6 @@ const CARD_TEXT_STYLE = {
     "0 1px 0 rgba(255,255,255,0.28), 0 -1px 0 rgba(0,0,0,0.55), 0 2px 4px rgba(0,0,0,0.45)",
 };
 
-/* =========================================================
-   TILT
-========================================================= */
-
 const MAX_TILT = 8;
 
 /* =========================================================
@@ -104,19 +103,11 @@ function ReflectiveCardArt({ image, alt, children }) {
 
   const rafRef = useRef(0);
 
-  /* =======================================================
-     CLEANUP
-  ======================================================= */
-
   useEffect(() => {
     return () => {
       cancelAnimationFrame(rafRef.current);
     };
   }, []);
-
-  /* =======================================================
-     APPLY CSS VARIABLES
-  ======================================================= */
 
   const apply = useCallback((values) => {
     const element = tiltRef.current;
@@ -129,10 +120,6 @@ function ReflectiveCardArt({ image, alt, children }) {
       element.style.setProperty(key, value);
     });
   }, []);
-
-  /* =======================================================
-     POINTER MOVE
-  ======================================================= */
 
   const handlePointerMove = (event) => {
     const frame = frameRef.current;
@@ -183,28 +170,24 @@ function ReflectiveCardArt({ image, alt, children }) {
     });
   };
 
-  /* =======================================================
-     POINTER LEAVE
-  ======================================================= */
-
   const handlePointerLeave = () => {
     cancelAnimationFrame(rafRef.current);
 
     apply({
       "--rx": "0deg",
+
       "--ry": "0deg",
+
       "--scale": "1",
+
       "--glare": "0",
     });
   };
 
-  /* =======================================================
-     IMAGE MASK
-  ======================================================= */
-
   const maskStyle = image
     ? {
         WebkitMaskImage: `url("${image}")`,
+
         maskImage: `url("${image}")`,
 
         WebkitMaskSize: "cover",
@@ -257,10 +240,15 @@ function ReflectiveCardArt({ image, alt, children }) {
         "
         style={{
           "--mx": "50%",
+
           "--my": "50%",
+
           "--rx": "0deg",
+
           "--ry": "0deg",
+
           "--scale": "1",
+
           "--glare": "0",
 
           transform:
@@ -269,16 +257,8 @@ function ReflectiveCardArt({ image, alt, children }) {
           transformStyle: "preserve-3d",
 
           transition: "transform 180ms ease-out",
-
-          filter: "none",
-
-          boxShadow: "none",
         }}
       >
-        {/* =================================================
-            IMAGE
-        ================================================= */}
-
         {image ? (
           <img
             src={image}
@@ -318,10 +298,6 @@ function ReflectiveCardArt({ image, alt, children }) {
           </div>
         )}
 
-        {/* =================================================
-            REFLECTION
-        ================================================= */}
-
         <div
           aria-hidden="true"
           className="
@@ -340,10 +316,6 @@ function ReflectiveCardArt({ image, alt, children }) {
           }}
         />
 
-        {/* =================================================
-            BOTTOM GRADIENT
-        ================================================= */}
-
         <div
           aria-hidden="true"
           className="
@@ -359,10 +331,6 @@ function ReflectiveCardArt({ image, alt, children }) {
               "linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.2) 28%, rgba(0,0,0,0) 55%)",
           }}
         />
-
-        {/* =================================================
-            GLARE
-        ================================================= */}
 
         <div
           aria-hidden="true"
@@ -385,10 +353,6 @@ function ReflectiveCardArt({ image, alt, children }) {
             mixBlendMode: "soft-light",
           }}
         />
-
-        {/* =================================================
-            SHEEN
-        ================================================= */}
 
         <div
           aria-hidden="true"
@@ -420,12 +384,6 @@ function ReflectiveCardArt({ image, alt, children }) {
 
 /* =========================================================
    SAVINGS CARD
-
-   - Tap / click the card  -> transfer to on-hand cash
-   - Trash button          -> remove the card
-
-   Removing a card automatically subtracts its balance from
-   Savings, because Savings is the sum of the remaining cards.
 ========================================================= */
 
 function SavingsCard({ account, removing = false, onTransfer, onRemove }) {
@@ -448,15 +406,19 @@ function SavingsCard({ account, removing = false, onTransfer, onRemove }) {
       }}
       animate={{
         opacity: removing ? 0.55 : 1,
+
         y: 0,
+
         scale: 1,
       }}
       exit={{
         opacity: 0,
+
         scale: 0.96,
       }}
       transition={{
         duration: 0.18,
+
         ease: "easeOut",
       }}
       className="
@@ -472,10 +434,6 @@ function SavingsCard({ account, removing = false, onTransfer, onRemove }) {
         aspectRatio: "1.586 / 1",
       }}
     >
-      {/* =================================================
-          CARD (tap = transfer)
-      ================================================= */}
-
       <motion.button
         type="button"
         disabled={removing}
@@ -502,10 +460,6 @@ function SavingsCard({ account, removing = false, onTransfer, onRemove }) {
         "
       >
         <ReflectiveCardArt image={image} alt={provider?.name || name}>
-          {/* =================================================
-              NAME + BALANCE
-          ================================================= */}
-
           <div
             className="
               pointer-events-none
@@ -563,13 +517,10 @@ function SavingsCard({ account, removing = false, onTransfer, onRemove }) {
         </ReflectiveCardArt>
       </motion.button>
 
-      {/* =================================================
-          ACTIONS (bottom right, away from the card logos)
-      ================================================= */}
-
       <div
         className="
           absolute
+
           bottom-2.5
           right-2.5
 
@@ -580,8 +531,6 @@ function SavingsCard({ account, removing = false, onTransfer, onRemove }) {
           gap-1.5
         "
       >
-        {/* TRANSFER HINT (desktop hover) */}
-
         <span
           aria-hidden="true"
           className="
@@ -615,17 +564,18 @@ function SavingsCard({ account, removing = false, onTransfer, onRemove }) {
           <ArrowLeftRight size={12} strokeWidth={1.7} />
         </span>
 
-        {/* REMOVE */}
-
         <button
           type="button"
           disabled={removing}
-          onClick={() => onRemove?.(account)}
+          onClick={(event) => {
+            event.stopPropagation();
+
+            onRemove?.(account);
+          }}
           aria-label={`Remove ${name}`}
           title={`Remove ${name}`}
           className="
             flex
-
             h-8
             w-8
 
@@ -671,18 +621,13 @@ function SavingsCard({ account, removing = false, onTransfer, onRemove }) {
 
 /* =========================================================
    DATONG WALLET
-
-   TOP LEFT
-   NO BLACK BACKGROUND — just the wallet image.
-   BIGGER than before.
-
-   The readability gradient is masked to the wallet art,
-   so nothing draws outside the actual image.
 ========================================================= */
 
 function DatongWalletSummary({
   balance = 0,
   className = "w-[185px] sm:w-[250px] lg:w-[300px]",
+  onEdit,
+  onTransfer,
 }) {
   const maskStyle = {
     WebkitMaskImage: `url("${datongWallet}")`,
@@ -706,18 +651,24 @@ function DatongWalletSummary({
     <motion.div
       initial={{
         opacity: 0,
+
         x: -8,
+
         y: 4,
       }}
       animate={{
         opacity: 1,
+
         x: 0,
+
         y: 0,
       }}
       transition={{
         duration: 0.22,
       }}
       className={`
+        group/wallet
+
         relative
 
         aspect-[1.586/1]
@@ -727,13 +678,6 @@ function DatongWalletSummary({
         ${className}
       `}
     >
-      {/* =================================================
-          DATONG WALLET IMAGE
-
-          object-contain:
-          keeps the full wallet visible.
-      ================================================= */}
-
       <img
         src={datongWallet}
         alt="Datong Wallet"
@@ -755,12 +699,6 @@ function DatongWalletSummary({
         "
       />
 
-      {/* =================================================
-          DARK FADE
-
-          Subtle only at bottom, masked to the wallet art.
-      ================================================= */}
-
       <div
         aria-hidden="true"
         className="
@@ -779,9 +717,7 @@ function DatongWalletSummary({
         }}
       />
 
-      {/* =================================================
-          BALANCE
-      ================================================= */}
+      {/* BALANCE */}
 
       <div
         className="
@@ -832,14 +768,113 @@ function DatongWalletSummary({
           {formatPeso(balance)}
         </p>
       </div>
+
+      {/* ACTIONS */}
+
+      <div
+        className="
+          absolute
+
+          right-[8%]
+          top-[10%]
+
+          z-20
+
+          flex
+          items-center
+          gap-1.5
+        "
+      >
+        {onEdit && (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+
+              onEdit();
+            }}
+            aria-label="Set wallet balance"
+            title="Set wallet balance"
+            className="
+              flex
+              h-8
+              w-8
+
+              items-center
+              justify-center
+
+              rounded-full
+
+              bg-black/50
+
+              text-white
+
+              outline-none
+
+              backdrop-blur-md
+
+              transition-all
+
+              hover:bg-black/75
+
+              active:scale-90
+
+              focus-visible:ring-2
+              focus-visible:ring-white
+            "
+          >
+            <Plus size={14} strokeWidth={1.9} />
+          </button>
+        )}
+
+        {onTransfer && (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+
+              onTransfer();
+            }}
+            aria-label="Transfer wallet money"
+            title="Transfer to savings"
+            className="
+              flex
+              h-8
+              w-8
+
+              items-center
+              justify-center
+
+              rounded-full
+
+              bg-black/50
+
+              text-white
+
+              outline-none
+
+              backdrop-blur-md
+
+              transition-all
+
+              hover:bg-black/75
+
+              active:scale-90
+
+              focus-visible:ring-2
+              focus-visible:ring-white
+            "
+          >
+            <ArrowLeftRight size={13} strokeWidth={1.8} />
+          </button>
+        )}
+      </div>
     </motion.div>
   );
 }
 
 /* =========================================================
-   SAVINGS
-
-   CENTER
+   SAVINGS SUMMARY
 ========================================================= */
 
 function SavingsSummary({ balance = 0 }) {
@@ -848,10 +883,12 @@ function SavingsSummary({ balance = 0 }) {
       key={balance}
       initial={{
         opacity: 0,
+
         y: 6,
       }}
       animate={{
         opacity: 1,
+
         y: 0,
       }}
       transition={{
@@ -886,8 +923,6 @@ function SavingsSummary({ balance = 0 }) {
         sm:py-6
       "
     >
-      {/* LABEL */}
-
       <p
         style={CARD_FONT_STYLE}
         className="
@@ -903,8 +938,6 @@ function SavingsSummary({ balance = 0 }) {
       >
         Savings
       </p>
-
-      {/* TOTAL */}
 
       <p
         style={CARD_FONT_STYLE}
@@ -927,13 +960,15 @@ function SavingsSummary({ balance = 0 }) {
 }
 
 /* =========================================================
-   BALANCE FLIP CARD  (MOBILE ONLY)
-
-   Tap the Savings container  -> flips to the Datong Wallet.
-   Tap the Wallet             -> flips back to Savings.
+   MOBILE BALANCE FLIP
 ========================================================= */
 
-function BalanceFlipCard({ savings = 0, wallet = 0 }) {
+function BalanceFlipCard({
+  savings = 0,
+  wallet = 0,
+  onWalletEdit,
+  onWalletTransfer,
+}) {
   const [showWallet, setShowWallet] = useState(false);
 
   const hiddenFace = {
@@ -943,19 +978,11 @@ function BalanceFlipCard({ savings = 0, wallet = 0 }) {
   };
 
   return (
-    <button
-      type="button"
-      onClick={() => setShowWallet((current) => !current)}
-      aria-label={
-        showWallet
-          ? "Datong Wallet. Tap to show savings"
-          : "Savings. Tap to show Datong Wallet"
-      }
+    <div
       className="
         relative
 
         mx-auto
-        block
 
         aspect-[1.586/1]
 
@@ -966,13 +993,7 @@ function BalanceFlipCard({ savings = 0, wallet = 0 }) {
 
         bg-transparent
 
-        outline-none
-
         [-webkit-tap-highlight-color:transparent]
-
-        focus-visible:ring-2
-        focus-visible:ring-black
-        focus-visible:ring-offset-2
       "
       style={{
         perspective: "1200px",
@@ -985,18 +1006,23 @@ function BalanceFlipCard({ savings = 0, wallet = 0 }) {
         }}
         transition={{
           duration: 0.5,
+
           ease: [0.4, 0, 0.2, 1],
         }}
-        className="absolute inset-0"
+        className="
+          absolute
+          inset-0
+        "
         style={{
           transformStyle: "preserve-3d",
         }}
       >
-        {/* =================================================
-            FRONT = SAVINGS
-        ================================================= */}
+        {/* SAVINGS */}
 
-        <div
+        <button
+          type="button"
+          onClick={() => setShowWallet(true)}
+          aria-label="Savings. Tap to show Datong Wallet"
           className="
             absolute
             inset-0
@@ -1013,8 +1039,14 @@ function BalanceFlipCard({ savings = 0, wallet = 0 }) {
             px-5
 
             text-center
+
+            outline-none
           "
-          style={hiddenFace}
+          style={{
+            ...hiddenFace,
+
+            pointerEvents: showWallet ? "none" : "auto",
+          }}
         >
           <p
             style={CARD_FONT_STYLE}
@@ -1046,7 +1078,6 @@ function BalanceFlipCard({ savings = 0, wallet = 0 }) {
           </p>
 
           <p
-            style={CARD_FONT_STYLE}
             className="
               mt-3
 
@@ -1085,11 +1116,9 @@ function BalanceFlipCard({ savings = 0, wallet = 0 }) {
           >
             <Repeat size={13} strokeWidth={1.7} />
           </span>
-        </div>
+        </button>
 
-        {/* =================================================
-            BACK = DATONG WALLET
-        ================================================= */}
+        {/* WALLET */}
 
         <div
           className="
@@ -1100,20 +1129,32 @@ function BalanceFlipCard({ savings = 0, wallet = 0 }) {
             ...hiddenFace,
 
             transform: "rotateY(180deg)",
+
+            pointerEvents: showWallet ? "auto" : "none",
           }}
         >
-          <DatongWalletSummary balance={wallet} className="h-full w-full" />
-
-          <span
-            aria-hidden="true"
+          <DatongWalletSummary
+            balance={wallet}
             className="
-              pointer-events-none
+              h-full
+              w-full
+            "
+            onEdit={onWalletEdit}
+            onTransfer={onWalletTransfer}
+          />
 
+          <button
+            type="button"
+            onClick={() => setShowWallet(false)}
+            aria-label="Show savings"
+            title="Show savings"
+            className="
               absolute
-              right-3
+
+              left-3
               top-3
 
-              z-10
+              z-30
 
               flex
               h-7
@@ -1128,14 +1169,18 @@ function BalanceFlipCard({ savings = 0, wallet = 0 }) {
 
               text-white/80
 
+              outline-none
+
               backdrop-blur-md
+
+              active:scale-90
             "
           >
             <Repeat size={13} strokeWidth={1.7} />
-          </span>
+          </button>
         </div>
       </motion.div>
-    </button>
+    </div>
   );
 }
 
@@ -1191,7 +1236,6 @@ function AddCardSlot({ onClick }) {
             mx-auto
 
             flex
-
             h-9
             w-9
 
@@ -1223,7 +1267,7 @@ function AddCardSlot({ onClick }) {
 }
 
 /* =========================================================
-   EMPTY SLOT
+   EMPTY CARD
 ========================================================= */
 
 function EmptyCardSlot() {
@@ -1291,12 +1335,6 @@ function CardsSkeleton() {
         sm:pt-12
       "
     >
-      {/* =================================================
-          TOP
-      ================================================= */}
-
-      {/* MOBILE (single flip card) */}
-
       <div
         className="
           mx-auto
@@ -1317,8 +1355,6 @@ function CardsSkeleton() {
         "
       />
 
-      {/* TABLET / DESKTOP */}
-
       <div
         className="
           relative
@@ -1332,8 +1368,6 @@ function CardsSkeleton() {
           lg:min-h-[220px]
         "
       >
-        {/* WALLET (same size as the real wallet, no black) */}
-
         <div
           className="
             absolute
@@ -1343,7 +1377,7 @@ function CardsSkeleton() {
 
             aspect-[1.586/1]
 
-            w-[185px]
+            w-[250px]
 
             animate-pulse
 
@@ -1351,13 +1385,9 @@ function CardsSkeleton() {
 
             bg-gray-200
 
-            sm:w-[250px]
-
             lg:w-[300px]
           "
         />
-
-        {/* SAVINGS */}
 
         <div
           className="
@@ -1365,7 +1395,7 @@ function CardsSkeleton() {
 
             flex
 
-            min-h-[120px]
+            min-h-[150px]
 
             w-full
             max-w-[520px]
@@ -1379,8 +1409,6 @@ function CardsSkeleton() {
             rounded-[26px]
 
             bg-black
-
-            sm:min-h-[150px]
           "
         >
           <div
@@ -1398,23 +1426,16 @@ function CardsSkeleton() {
             className="
               mt-3
 
-              h-8
-              w-32
+              h-10
+              w-44
 
               rounded
 
               bg-white/20
-
-              sm:h-10
-              sm:w-44
             "
           />
         </div>
       </div>
-
-      {/* =================================================
-          GRID
-      ================================================= */}
 
       <div
         className="
@@ -1445,10 +1466,6 @@ function CardsSkeleton() {
 ========================================================= */
 
 function CardsPage({ loading = false }) {
-  /* =======================================================
-     SUMMARY
-  ======================================================= */
-
   const [summary, setSummary] = useState({
     savings: "0.00",
 
@@ -1459,27 +1476,11 @@ function CardsPage({ loading = false }) {
     currency: "PHP",
   });
 
-  /* =======================================================
-     MEMBER CARDS
-  ======================================================= */
-
   const [cards, setCards] = useState([]);
-
-  /* =======================================================
-     CATALOG
-  ======================================================= */
 
   const [catalog, setCatalog] = useState([]);
 
-  /* =======================================================
-     CASH
-  ======================================================= */
-
   const [cashAccount, setCashAccount] = useState(null);
-
-  /* =======================================================
-     LOADING
-  ======================================================= */
 
   const [dataLoading, setDataLoading] = useState(true);
 
@@ -1502,13 +1503,21 @@ function CardsPage({ loading = false }) {
   const [transferring, setTransferring] = useState(false);
 
   /* =======================================================
-     REMOVE CARD
+     WALLET BALANCE
+  ======================================================= */
+
+  const [walletModalOpen, setWalletModalOpen] = useState(false);
+
+  const [walletSaving, setWalletSaving] = useState(false);
+
+  /* =======================================================
+     REMOVE
   ======================================================= */
 
   const [removingId, setRemovingId] = useState(null);
 
   /* =======================================================
-     LOAD FONT
+     FONT
   ======================================================= */
 
   useEffect(() => {
@@ -1532,7 +1541,7 @@ function CardsPage({ loading = false }) {
   }, []);
 
   /* =======================================================
-     LOAD FINANCE
+     LOAD
   ======================================================= */
 
   const loadFinance = useCallback(async ({ silent = false } = {}) => {
@@ -1579,16 +1588,12 @@ function CardsPage({ loading = false }) {
     }
   }, []);
 
-  /* =======================================================
-     INITIAL LOAD
-  ======================================================= */
-
   useEffect(() => {
     loadFinance();
   }, [loadFinance]);
 
   /* =======================================================
-     EXISTING PROVIDER IDS
+     CATALOG
   ======================================================= */
 
   const existingProviderIds = useMemo(() => {
@@ -1598,12 +1603,6 @@ function CardsPage({ loading = false }) {
 
     return new Set(ids);
   }, [cards]);
-
-  /* =======================================================
-     AVAILABLE CATALOG
-
-     Already-added providers are removed.
-  ======================================================= */
 
   const availableCatalog = useMemo(
     () =>
@@ -1645,10 +1644,6 @@ function CardsPage({ loading = false }) {
     }
   };
 
-  /* =======================================================
-     OPEN ADD
-  ======================================================= */
-
   const handleOpenAdd = () => {
     if (!canAddCard) {
       toast("You already added all available cards.");
@@ -1660,7 +1655,41 @@ function CardsPage({ loading = false }) {
   };
 
   /* =======================================================
-     OPEN TRANSFER
+     WALLET BALANCE
+  ======================================================= */
+
+  const handleOpenWalletBalance = () => {
+    setWalletModalOpen(true);
+  };
+
+  const handleSaveWalletBalance = async ({ amount }) => {
+    if (walletSaving) {
+      return;
+    }
+
+    try {
+      setWalletSaving(true);
+
+      await updateCashBalance(amount);
+
+      setWalletModalOpen(false);
+
+      toast.success("Wallet balance updated.");
+
+      await loadFinance({
+        silent: true,
+      });
+    } catch (error) {
+      console.error("Unable to update wallet balance:", error);
+
+      toast.error(error?.message || "Unable to update wallet.");
+    } finally {
+      setWalletSaving(false);
+    }
+  };
+
+  /* =======================================================
+     TRANSFER
   ======================================================= */
 
   const handleOpenTransfer = (source = null) => {
@@ -1669,9 +1698,23 @@ function CardsPage({ loading = false }) {
     setTransferModalOpen(true);
   };
 
-  /* =======================================================
-     TRANSFER
-  ======================================================= */
+  const handleOpenWalletTransfer = () => {
+    if (cards.length === 0) {
+      toast("Add a savings card first.");
+
+      return;
+    }
+
+    handleOpenTransfer({
+      id: cashAccount?.id ?? null,
+
+      type: "cash",
+
+      name: "Datong Wallet",
+
+      balance: cashAccount?.balance ?? summary.actual_money ?? "0.00",
+    });
+  };
 
   const handleTransfer = async (values) => {
     if (transferring) {
@@ -1703,9 +1746,6 @@ function CardsPage({ loading = false }) {
 
   /* =======================================================
      REMOVE CARD
-
-     Savings = the sum of the remaining cards, so removing a
-     card automatically subtracts its balance from Savings.
   ======================================================= */
 
   const handleRemoveCard = async (account) => {
@@ -1758,20 +1798,12 @@ function CardsPage({ loading = false }) {
     return <CardsSkeleton />;
   }
 
-  /* =======================================================
-     EMPTY SLOTS
-  ======================================================= */
-
   const minimumSlots = 8;
 
   const emptySlots = Math.max(0, minimumSlots - cards.length);
 
   return (
     <>
-      {/* ===================================================
-          PAGE
-      =================================================== */}
-
       <main
         className="
           relative
@@ -1793,22 +1825,26 @@ function CardsPage({ loading = false }) {
         "
       >
         {/* =================================================
-            TOP AREA
-
-            WALLET = TOP LEFT
-            SAVINGS = PAGE CENTER
+            MOBILE
         ================================================= */}
 
-        {/* MOBILE: one card that flips Savings <-> Wallet */}
-
-        <section className="mb-8 sm:hidden">
+        <section
+          className="
+            mb-8
+            sm:hidden
+          "
+        >
           <BalanceFlipCard
             savings={summary.savings || 0}
             wallet={summary.actual_money || 0}
+            onWalletEdit={handleOpenWalletBalance}
+            onWalletTransfer={handleOpenWalletTransfer}
           />
         </section>
 
-        {/* TABLET / DESKTOP: wallet top-left, savings centered */}
+        {/* =================================================
+            DESKTOP / TABLET
+        ================================================= */}
 
         <section
           className="
@@ -1823,10 +1859,6 @@ function CardsPage({ loading = false }) {
             lg:min-h-[220px]
           "
         >
-          {/* ===============================================
-              DATONG WALLET
-          =============================================== */}
-
           <div
             className="
               absolute
@@ -1837,12 +1869,12 @@ function CardsPage({ loading = false }) {
               z-10
             "
           >
-            <DatongWalletSummary balance={summary.actual_money || 0} />
+            <DatongWalletSummary
+              balance={summary.actual_money || 0}
+              onEdit={handleOpenWalletBalance}
+              onTransfer={handleOpenWalletTransfer}
+            />
           </div>
-
-          {/* ===============================================
-              SAVINGS CENTER
-          =============================================== */}
 
           <div
             className="
@@ -1881,10 +1913,6 @@ function CardsPage({ loading = false }) {
             xl:gap-y-7
           "
         >
-          {/* =================================================
-              REAL CARDS
-          ================================================= */}
-
           <AnimatePresence mode="popLayout">
             {cards.map((account) => (
               <SavingsCard
@@ -1896,10 +1924,6 @@ function CardsPage({ loading = false }) {
               />
             ))}
           </AnimatePresence>
-
-          {/* =================================================
-              EMPTY SLOTS
-          ================================================= */}
 
           {Array.from({
             length: emptySlots,
@@ -1916,7 +1940,7 @@ function CardsPage({ loading = false }) {
       </main>
 
       {/* ===================================================
-          ADD CARD MODAL
+          ADD CARD
       =================================================== */}
 
       <AnimatePresence>
@@ -1939,7 +1963,29 @@ function CardsPage({ loading = false }) {
       </AnimatePresence>
 
       {/* ===================================================
-          TRANSFER MODAL
+          WALLET BALANCE
+      =================================================== */}
+
+      <AnimatePresence>
+        {walletModalOpen && (
+          <WalletBalanceModal
+            open={walletModalOpen}
+            cashAccount={cashAccount}
+            submitting={walletSaving}
+            onClose={() => {
+              if (walletSaving) {
+                return;
+              }
+
+              setWalletModalOpen(false);
+            }}
+            onSubmit={handleSaveWalletBalance}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ===================================================
+          TRANSFER
       =================================================== */}
 
       <AnimatePresence>
