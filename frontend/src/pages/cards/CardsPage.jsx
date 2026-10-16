@@ -1,16 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
 import {
   ArrowLeftRight,
   LoaderCircle,
   Plus,
-  Repeat,
   Trash2,
   WalletCards,
 } from "lucide-react";
-
 import { AnimatePresence, motion } from "motion/react";
-
 import toast from "react-hot-toast";
 
 import AddMemberCardModal from "../../components/modals/AddMemberCardModal";
@@ -41,11 +37,8 @@ function formatPeso(value) {
 
   return new Intl.NumberFormat("en-PH", {
     style: "currency",
-
     currency: "PHP",
-
     minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
-
     maximumFractionDigits: 2,
   }).format(Number.isFinite(amount) ? amount : 0);
 }
@@ -62,13 +55,11 @@ const CARD_FONT_URL =
 const CARD_FONT_STYLE = {
   fontFamily:
     '"Share Tech Mono", "OCR A Std", "OCR-A", "Courier New", ui-monospace, monospace',
-
   fontVariantNumeric: "tabular-nums",
 };
 
 const CARD_TEXT_STYLE = {
   ...CARD_FONT_STYLE,
-
   textShadow:
     "0 1px 0 rgba(255,255,255,0.28), 0 -1px 0 rgba(0,0,0,0.55), 0 2px 4px rgba(0,0,0,0.45)",
 };
@@ -98,9 +89,7 @@ function getAccountProviderId(account) {
 
 function ReflectiveCardArt({ image, alt, children }) {
   const frameRef = useRef(null);
-
   const tiltRef = useRef(null);
-
   const rafRef = useRef(0);
 
   useEffect(() => {
@@ -156,15 +145,10 @@ function ReflectiveCardArt({ image, alt, children }) {
     rafRef.current = requestAnimationFrame(() => {
       apply({
         "--mx": `${(x * 100).toFixed(2)}%`,
-
         "--my": `${(y * 100).toFixed(2)}%`,
-
         "--rx": `${((0.5 - y) * MAX_TILT * 2).toFixed(2)}deg`,
-
         "--ry": `${((x - 0.5) * MAX_TILT * 2).toFixed(2)}deg`,
-
         "--scale": "1.015",
-
         "--glare": "1",
       });
     });
@@ -175,11 +159,8 @@ function ReflectiveCardArt({ image, alt, children }) {
 
     apply({
       "--rx": "0deg",
-
       "--ry": "0deg",
-
       "--scale": "1",
-
       "--glare": "0",
     });
   };
@@ -187,19 +168,12 @@ function ReflectiveCardArt({ image, alt, children }) {
   const maskStyle = image
     ? {
         WebkitMaskImage: `url("${image}")`,
-
         maskImage: `url("${image}")`,
-
         WebkitMaskSize: "cover",
-
         maskSize: "cover",
-
         WebkitMaskRepeat: "no-repeat",
-
         maskRepeat: "no-repeat",
-
         WebkitMaskPosition: "center",
-
         maskPosition: "center",
       }
     : {};
@@ -213,9 +187,7 @@ function ReflectiveCardArt({ image, alt, children }) {
       className="
         absolute
         inset-0
-
         select-none
-
         bg-transparent
       "
       style={{
@@ -226,36 +198,23 @@ function ReflectiveCardArt({ image, alt, children }) {
         ref={tiltRef}
         className="
           relative
-
           h-full
           w-full
-
           overflow-hidden
-
           rounded-[18px]
-
           bg-transparent
-
           will-change-transform
         "
         style={{
           "--mx": "50%",
-
           "--my": "50%",
-
           "--rx": "0deg",
-
           "--ry": "0deg",
-
           "--scale": "1",
-
           "--glare": "0",
-
           transform:
             "rotateX(var(--rx)) rotateY(var(--ry)) scale(var(--scale))",
-
           transformStyle: "preserve-3d",
-
           transition: "transform 180ms ease-out",
         }}
       >
@@ -267,14 +226,10 @@ function ReflectiveCardArt({ image, alt, children }) {
             className="
               absolute
               inset-0
-
               h-full
               w-full
-
               select-none
-
               rounded-[18px]
-
               object-cover
             "
           />
@@ -283,13 +238,10 @@ function ReflectiveCardArt({ image, alt, children }) {
             className="
               absolute
               inset-0
-
               flex
               items-center
               justify-center
-
               rounded-[18px]
-
               bg-black
               text-white
             "
@@ -302,16 +254,13 @@ function ReflectiveCardArt({ image, alt, children }) {
           aria-hidden="true"
           className="
             pointer-events-none
-
             absolute
             inset-0
-
             rounded-[18px]
           "
           style={{
             background:
               "linear-gradient(145deg, rgba(255,255,255,0.14), transparent 38%, rgba(0,0,0,0.02))",
-
             mixBlendMode: "soft-light",
           }}
         />
@@ -320,13 +269,11 @@ function ReflectiveCardArt({ image, alt, children }) {
           aria-hidden="true"
           className="
             pointer-events-none
-
             absolute
             inset-0
           "
           style={{
             ...maskStyle,
-
             backgroundImage:
               "linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.2) 28%, rgba(0,0,0,0) 55%)",
           }}
@@ -336,20 +283,15 @@ function ReflectiveCardArt({ image, alt, children }) {
           aria-hidden="true"
           className="
             pointer-events-none
-
             absolute
             inset-0
           "
           style={{
             ...maskStyle,
-
             opacity: "var(--glare)",
-
             transition: "opacity 200ms ease-out",
-
             background:
               "radial-gradient(circle at var(--mx) var(--my), rgba(255,255,255,0.52) 0%, rgba(255,255,255,0.14) 26%, transparent 58%)",
-
             mixBlendMode: "soft-light",
           }}
         />
@@ -358,20 +300,15 @@ function ReflectiveCardArt({ image, alt, children }) {
           aria-hidden="true"
           className="
             pointer-events-none
-
             absolute
             inset-0
           "
           style={{
             ...maskStyle,
-
             opacity: "calc(var(--glare) * 0.75)",
-
             transition: "opacity 200ms ease-out",
-
             background:
               "linear-gradient(115deg, transparent calc(var(--mx) - 24%), rgba(255,255,255,0.30) var(--mx), transparent calc(var(--mx) + 24%))",
-
             mixBlendMode: "overlay",
           }}
         />
@@ -386,15 +323,27 @@ function ReflectiveCardArt({ image, alt, children }) {
    SAVINGS CARD
 ========================================================= */
 
-function SavingsCard({ account, removing = false, onTransfer, onRemove }) {
+function SavingsCard({
+  account,
+  removing = false,
+  onTransfer,
+  onRemove,
+}) {
   const provider = account?.provider || {};
 
   const image =
-    provider.landscape_image_url || provider.portrait_image_url || "";
+    provider.landscape_image_url ||
+    provider.portrait_image_url ||
+    "";
 
-  const name = account?.name || provider?.name || "Savings";
+  const name =
+    account?.name ||
+    provider?.name ||
+    "Savings";
 
-  const balance = account?.balance || "0.00";
+  const balance =
+    account?.balance ||
+    "0.00";
 
   return (
     <motion.div
@@ -406,28 +355,22 @@ function SavingsCard({ account, removing = false, onTransfer, onRemove }) {
       }}
       animate={{
         opacity: removing ? 0.55 : 1,
-
         y: 0,
-
         scale: 1,
       }}
       exit={{
         opacity: 0,
-
         scale: 0.96,
       }}
       transition={{
         duration: 0.18,
-
         ease: "easeOut",
       }}
       className="
         group
         relative
-
         block
         w-full
-
         rounded-[18px]
       "
       style={{
@@ -438,38 +381,35 @@ function SavingsCard({ account, removing = false, onTransfer, onRemove }) {
         type="button"
         disabled={removing}
         onClick={() => onTransfer?.(account)}
-        aria-label={`${name}, balance ${formatPeso(balance)}. Transfer money`}
+        aria-label={`${name}, balance ${formatPeso(
+          balance,
+        )}. Transfer money`}
         whileTap={{
           scale: 0.98,
         }}
         className="
           absolute
           inset-0
-
           rounded-[18px]
-
           bg-transparent
-
           text-left
-
           outline-none
-
           focus-visible:ring-2
           focus-visible:ring-black
           focus-visible:ring-offset-2
         "
       >
-        <ReflectiveCardArt image={image} alt={provider?.name || name}>
+        <ReflectiveCardArt
+          image={image}
+          alt={provider?.name || name}
+        >
           <div
             className="
               pointer-events-none
-
               absolute
-
               bottom-[10%]
               left-[7%]
               right-[7%]
-
               z-10
             "
           >
@@ -477,16 +417,12 @@ function SavingsCard({ account, removing = false, onTransfer, onRemove }) {
               style={CARD_TEXT_STYLE}
               className="
                 truncate
-
                 text-[11px]
                 font-normal
                 uppercase
                 tracking-[0.12em]
-
                 text-white
-
                 sm:text-[13px]
-
                 2xl:text-[15px]
               "
             >
@@ -497,17 +433,12 @@ function SavingsCard({ account, removing = false, onTransfer, onRemove }) {
               style={CARD_TEXT_STYLE}
               className="
                 mt-0.5
-
                 truncate
-
                 text-[13px]
                 font-normal
                 tracking-[0.1em]
-
                 text-white
-
                 sm:text-[15px]
-
                 2xl:text-[17px]
               "
             >
@@ -520,12 +451,9 @@ function SavingsCard({ account, removing = false, onTransfer, onRemove }) {
       <div
         className="
           absolute
-
           bottom-2.5
           right-2.5
-
           z-20
-
           flex
           items-center
           gap-1.5
@@ -535,33 +463,25 @@ function SavingsCard({ account, removing = false, onTransfer, onRemove }) {
           aria-hidden="true"
           className="
             pointer-events-none
-
             hidden
-
             h-8
             w-8
-
             items-center
             justify-center
-
             rounded-full
-
             bg-black/50
-
             text-white
-
             opacity-0
-
             backdrop-blur-md
-
             transition-opacity
-
             group-hover:opacity-100
-
             sm:flex
           "
         >
-          <ArrowLeftRight size={12} strokeWidth={1.7} />
+          <ArrowLeftRight
+            size={12}
+            strokeWidth={1.7}
+          />
         </span>
 
         <button
@@ -569,7 +489,6 @@ function SavingsCard({ account, removing = false, onTransfer, onRemove }) {
           disabled={removing}
           onClick={(event) => {
             event.stopPropagation();
-
             onRemove?.(account);
           }}
           aria-label={`Remove ${name}`}
@@ -578,40 +497,34 @@ function SavingsCard({ account, removing = false, onTransfer, onRemove }) {
             flex
             h-8
             w-8
-
             items-center
             justify-center
-
             rounded-full
-
             bg-black/50
-
             text-white
-
             outline-none
-
             backdrop-blur-md
-
             transition-all
-
             hover:bg-red-600
-
             focus-visible:opacity-100
             focus-visible:ring-2
             focus-visible:ring-white
-
             active:scale-90
-
             disabled:cursor-not-allowed
-
             sm:opacity-0
             sm:group-hover:opacity-100
           "
         >
           {removing ? (
-            <LoaderCircle size={12} className="animate-spin" />
+            <LoaderCircle
+              size={12}
+              className="animate-spin"
+            />
           ) : (
-            <Trash2 size={12} strokeWidth={1.8} />
+            <Trash2
+              size={12}
+              strokeWidth={1.8}
+            />
           )}
         </button>
       </div>
@@ -631,19 +544,12 @@ function DatongWalletSummary({
 }) {
   const maskStyle = {
     WebkitMaskImage: `url("${datongWallet}")`,
-
     maskImage: `url("${datongWallet}")`,
-
     WebkitMaskSize: "contain",
-
     maskSize: "contain",
-
     WebkitMaskRepeat: "no-repeat",
-
     maskRepeat: "no-repeat",
-
     WebkitMaskPosition: "center",
-
     maskPosition: "center",
   };
 
@@ -651,16 +557,12 @@ function DatongWalletSummary({
     <motion.div
       initial={{
         opacity: 0,
-
         x: -8,
-
         y: 4,
       }}
       animate={{
         opacity: 1,
-
         x: 0,
-
         y: 0,
       }}
       transition={{
@@ -668,13 +570,9 @@ function DatongWalletSummary({
       }}
       className={`
         group/wallet
-
         relative
-
         aspect-[1.586/1]
-
         bg-transparent
-
         ${className}
       `}
     >
@@ -685,16 +583,11 @@ function DatongWalletSummary({
         className="
           absolute
           inset-0
-
           z-[1]
-
           h-full
           w-full
-
           select-none
-
           bg-transparent
-
           object-contain
         "
       />
@@ -703,15 +596,12 @@ function DatongWalletSummary({
         aria-hidden="true"
         className="
           pointer-events-none
-
           absolute
           inset-0
-
           z-[2]
         "
         style={{
           ...maskStyle,
-
           backgroundImage:
             "linear-gradient(to top, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.15) 30%, rgba(0,0,0,0) 48%)",
         }}
@@ -722,12 +612,9 @@ function DatongWalletSummary({
       <div
         className="
           pointer-events-none
-
           absolute
-
           bottom-[10%]
           left-[14%]
-
           z-[3]
         "
       >
@@ -738,11 +625,8 @@ function DatongWalletSummary({
             font-normal
             uppercase
             tracking-[0.16em]
-
             text-white/70
-
             sm:text-[10px]
-
             lg:text-[11px]
           "
         >
@@ -753,15 +637,11 @@ function DatongWalletSummary({
           style={CARD_TEXT_STYLE}
           className="
             mt-0.5
-
             text-[17px]
             font-normal
             tracking-[0.08em]
-
             text-white
-
             sm:text-[23px]
-
             lg:text-[27px]
           "
         >
@@ -774,12 +654,9 @@ function DatongWalletSummary({
       <div
         className="
           absolute
-
           right-[8%]
           top-[10%]
-
           z-20
-
           flex
           items-center
           gap-1.5
@@ -790,7 +667,6 @@ function DatongWalletSummary({
             type="button"
             onClick={(event) => {
               event.stopPropagation();
-
               onEdit();
             }}
             aria-label="Set wallet balance"
@@ -799,31 +675,24 @@ function DatongWalletSummary({
               flex
               h-8
               w-8
-
               items-center
               justify-center
-
               rounded-full
-
               bg-black/50
-
               text-white
-
               outline-none
-
               backdrop-blur-md
-
               transition-all
-
               hover:bg-black/75
-
               active:scale-90
-
               focus-visible:ring-2
               focus-visible:ring-white
             "
           >
-            <Plus size={14} strokeWidth={1.9} />
+            <Plus
+              size={14}
+              strokeWidth={1.9}
+            />
           </button>
         )}
 
@@ -832,7 +701,6 @@ function DatongWalletSummary({
             type="button"
             onClick={(event) => {
               event.stopPropagation();
-
               onTransfer();
             }}
             aria-label="Transfer wallet money"
@@ -841,31 +709,24 @@ function DatongWalletSummary({
               flex
               h-8
               w-8
-
               items-center
               justify-center
-
               rounded-full
-
               bg-black/50
-
               text-white
-
               outline-none
-
               backdrop-blur-md
-
               transition-all
-
               hover:bg-black/75
-
               active:scale-90
-
               focus-visible:ring-2
               focus-visible:ring-white
             "
           >
-            <ArrowLeftRight size={13} strokeWidth={1.8} />
+            <ArrowLeftRight
+              size={13}
+              strokeWidth={1.8}
+            />
           </button>
         )}
       </div>
@@ -877,18 +738,18 @@ function DatongWalletSummary({
    SAVINGS SUMMARY
 ========================================================= */
 
-function SavingsSummary({ balance = 0 }) {
+function SavingsSummary({
+  balance = 0,
+}) {
   return (
     <motion.div
       key={balance}
       initial={{
         opacity: 0,
-
         y: 6,
       }}
       animate={{
         opacity: 1,
-
         y: 0,
       }}
       transition={{
@@ -896,29 +757,19 @@ function SavingsSummary({ balance = 0 }) {
       }}
       className="
         mx-auto
-
         flex
-
         min-h-[120px]
-
         w-full
         max-w-[520px]
-
         flex-col
         items-center
         justify-center
-
         rounded-[26px]
-
         bg-black
-
         px-5
         py-5
-
         text-center
-
         sm:min-h-[150px]
-
         sm:px-7
         sm:py-6
       "
@@ -930,9 +781,7 @@ function SavingsSummary({ balance = 0 }) {
           font-normal
           uppercase
           tracking-[0.22em]
-
           text-white/60
-
           sm:text-[14px]
         "
       >
@@ -943,13 +792,10 @@ function SavingsSummary({ balance = 0 }) {
         style={CARD_FONT_STYLE}
         className="
           mt-2
-
           text-[29px]
           font-normal
           tracking-[0.04em]
-
           text-white
-
           sm:text-[40px]
         "
       >
@@ -969,83 +815,98 @@ function BalanceFlipCard({
   onWalletEdit,
   onWalletTransfer,
 }) {
-  const [showWallet, setShowWallet] = useState(false);
+  const [
+    showWallet,
+    setShowWallet,
+  ] = useState(false);
 
   const hiddenFace = {
-    backfaceVisibility: "hidden",
+    backfaceVisibility:
+      "hidden",
 
-    WebkitBackfaceVisibility: "hidden",
+    WebkitBackfaceVisibility:
+      "hidden",
   };
 
   return (
     <div
       className="
         relative
-
         mx-auto
-
         aspect-[1.586/1]
-
         w-full
         max-w-[360px]
-
         rounded-[26px]
-
         bg-transparent
-
         [-webkit-tap-highlight-color:transparent]
       "
       style={{
-        perspective: "1200px",
+        perspective:
+          "1200px",
       }}
     >
       <motion.div
         initial={false}
         animate={{
-          rotateY: showWallet ? 180 : 0,
+          rotateY:
+            showWallet
+              ? 180
+              : 0,
         }}
         transition={{
           duration: 0.5,
-
-          ease: [0.4, 0, 0.2, 1],
+          ease: [
+            0.4,
+            0,
+            0.2,
+            1,
+          ],
         }}
         className="
           absolute
           inset-0
         "
         style={{
-          transformStyle: "preserve-3d",
+          transformStyle:
+            "preserve-3d",
         }}
       >
-        {/* SAVINGS */}
+        {/* =================================================
+            SAVINGS
+
+            Tap the whole Savings card to show the wallet.
+            No separate flip icon.
+        ================================================= */}
 
         <button
           type="button"
-          onClick={() => setShowWallet(true)}
+          onClick={() =>
+            setShowWallet(
+              true,
+            )
+          }
           aria-label="Savings. Tap to show Datong Wallet"
           className="
             absolute
             inset-0
-
             flex
             flex-col
             items-center
             justify-center
-
             rounded-[26px]
-
             bg-black
-
             px-5
-
             text-center
-
             outline-none
+            transition-transform
+            active:scale-[0.99]
           "
           style={{
             ...hiddenFace,
-
-            pointerEvents: showWallet ? "none" : "auto",
+            pointerEvents:
+              showWallet
+                ? "none"
+                : "auto",
           }}
         >
           <p
@@ -1055,7 +916,6 @@ function BalanceFlipCard({
               font-normal
               uppercase
               tracking-[0.22em]
-
               text-white/60
             "
           >
@@ -1066,71 +926,59 @@ function BalanceFlipCard({
             style={CARD_FONT_STYLE}
             className="
               mt-2
-
               text-[34px]
               font-normal
               tracking-[0.04em]
-
               text-white
             "
           >
-            {formatPeso(savings)}
+            {formatPeso(
+              savings,
+            )}
           </p>
 
           <p
             className="
               mt-3
-
               text-[8px]
               uppercase
               tracking-[0.18em]
-
               text-white/35
             "
           >
             Tap to view wallet
           </p>
-
-          <span
-            aria-hidden="true"
-            className="
-              pointer-events-none
-
-              absolute
-              right-3
-              top-3
-
-              flex
-              h-7
-              w-7
-
-              items-center
-              justify-center
-
-              rounded-full
-
-              bg-white/10
-
-              text-white/70
-            "
-          >
-            <Repeat size={13} strokeWidth={1.7} />
-          </span>
         </button>
 
-        {/* WALLET */}
+        {/* =================================================
+            WALLET
+
+            Tap the wallet background to return to Savings.
+
+            The edit and transfer buttons already stop event
+            propagation, so using them will not flip the card.
+        ================================================= */}
 
         <div
+          onClick={() =>
+            setShowWallet(
+              false,
+            )
+          }
           className="
             absolute
             inset-0
+            cursor-pointer
+            [-webkit-tap-highlight-color:transparent]
           "
           style={{
             ...hiddenFace,
-
-            transform: "rotateY(180deg)",
-
-            pointerEvents: showWallet ? "auto" : "none",
+            transform:
+              "rotateY(180deg)",
+            pointerEvents:
+              showWallet
+                ? "auto"
+                : "none",
           }}
         >
           <DatongWalletSummary
@@ -1139,45 +987,13 @@ function BalanceFlipCard({
               h-full
               w-full
             "
-            onEdit={onWalletEdit}
-            onTransfer={onWalletTransfer}
+            onEdit={
+              onWalletEdit
+            }
+            onTransfer={
+              onWalletTransfer
+            }
           />
-
-          <button
-            type="button"
-            onClick={() => setShowWallet(false)}
-            aria-label="Show savings"
-            title="Show savings"
-            className="
-              absolute
-
-              left-3
-              top-3
-
-              z-30
-
-              flex
-              h-7
-              w-7
-
-              items-center
-              justify-center
-
-              rounded-full
-
-              bg-black/40
-
-              text-white/80
-
-              outline-none
-
-              backdrop-blur-md
-
-              active:scale-90
-            "
-          >
-            <Repeat size={13} strokeWidth={1.7} />
-          </button>
         </div>
       </motion.div>
     </div>
@@ -1188,7 +1004,9 @@ function BalanceFlipCard({
    ADD CARD SLOT
 ========================================================= */
 
-function AddCardSlot({ onClick }) {
+function AddCardSlot({
+  onClick,
+}) {
   return (
     <motion.button
       type="button"
@@ -1198,63 +1016,52 @@ function AddCardSlot({ onClick }) {
       }}
       className="
         flex
-
         w-full
-
         items-center
         justify-center
-
         rounded-[18px]
-
         border
         border-dashed
         border-gray-300
-
         bg-gray-100/40
-
         text-gray-400
-
         outline-none
-
         transition-all
-
         hover:border-gray-400
         hover:bg-gray-100
         hover:text-gray-700
-
         focus-visible:ring-2
         focus-visible:ring-black
         focus-visible:ring-offset-2
       "
       style={{
-        aspectRatio: "1.586 / 1",
+        aspectRatio:
+          "1.586 / 1",
       }}
     >
       <div className="text-center">
         <div
           className="
             mx-auto
-
             flex
             h-9
             w-9
-
             items-center
             justify-center
-
             rounded-full
-
             border
             border-current
           "
         >
-          <Plus size={14} strokeWidth={1.7} />
+          <Plus
+            size={14}
+            strokeWidth={1.7}
+          />
         </div>
 
         <p
           className="
             mt-2
-
             text-[8px]
             font-medium
           "
@@ -1276,13 +1083,12 @@ function EmptyCardSlot() {
       aria-hidden="true"
       className="
         w-full
-
         rounded-[18px]
-
         bg-gray-200/70
       "
       style={{
-        aspectRatio: "1.586 / 1",
+        aspectRatio:
+          "1.586 / 1",
       }}
     />
   );
@@ -1297,15 +1103,13 @@ function LoadingCard() {
     <div
       className="
         w-full
-
         animate-pulse
-
         rounded-[18px]
-
         bg-gray-200
       "
       style={{
-        aspectRatio: "1.586 / 1",
+        aspectRatio:
+          "1.586 / 1",
       }}
     />
   );
@@ -1320,16 +1124,12 @@ function CardsSkeleton() {
     <div
       className="
         mx-auto
-
         min-h-[calc(100vh-120px)]
-
         w-full
         max-w-[1180px]
-
         px-1
         pb-28
         pt-8
-
         sm:px-4
         sm:pb-10
         sm:pt-12
@@ -1339,18 +1139,12 @@ function CardsSkeleton() {
         className="
           mx-auto
           mb-8
-
           aspect-[1.586/1]
-
           w-full
           max-w-[360px]
-
           animate-pulse
-
           rounded-[26px]
-
           bg-black
-
           sm:hidden
         "
       />
@@ -1358,33 +1152,22 @@ function CardsSkeleton() {
       <div
         className="
           relative
-
           hidden
-
           min-h-[255px]
-
           sm:block
-
           lg:min-h-[220px]
         "
       >
         <div
           className="
             absolute
-
             left-0
             top-0
-
             aspect-[1.586/1]
-
             w-[250px]
-
             animate-pulse
-
             rounded-[20px]
-
             bg-gray-200
-
             lg:w-[300px]
           "
         />
@@ -1392,22 +1175,15 @@ function CardsSkeleton() {
         <div
           className="
             mx-auto
-
             flex
-
             min-h-[150px]
-
             w-full
             max-w-[520px]
-
             animate-pulse
-
             flex-col
             items-center
             justify-center
-
             rounded-[26px]
-
             bg-black
           "
         >
@@ -1415,9 +1191,7 @@ function CardsSkeleton() {
             className="
               h-3
               w-16
-
               rounded
-
               bg-white/20
             "
           />
@@ -1425,12 +1199,9 @@ function CardsSkeleton() {
           <div
             className="
               mt-3
-
               h-10
               w-44
-
               rounded
-
               bg-white/20
             "
           />
@@ -1441,21 +1212,27 @@ function CardsSkeleton() {
         className="
           grid
           grid-cols-2
-
           gap-x-3
           gap-y-5
-
           sm:grid-cols-3
           sm:gap-5
-
           lg:grid-cols-4
         "
       >
         {Array.from({
           length: 8,
-        }).map((_, index) => (
-          <LoadingCard key={index} />
-        ))}
+        }).map(
+          (
+            _,
+            index,
+          ) => (
+            <LoadingCard
+              key={
+                index
+              }
+            />
+          ),
+        )}
       </div>
     </div>
   );
@@ -1465,360 +1242,628 @@ function CardsSkeleton() {
    PAGE
 ========================================================= */
 
-function CardsPage({ loading = false }) {
-  const [summary, setSummary] = useState({
-    savings: "0.00",
-
-    actual_money: "0.00",
-
-    total_money: "0.00",
-
-    currency: "PHP",
+function CardsPage({
+  loading = false,
+}) {
+  const [
+    summary,
+    setSummary,
+  ] = useState({
+    savings:
+      "0.00",
+    actual_money:
+      "0.00",
+    total_money:
+      "0.00",
+    currency:
+      "PHP",
   });
 
-  const [cards, setCards] = useState([]);
+  const [
+    cards,
+    setCards,
+  ] = useState([]);
 
-  const [catalog, setCatalog] = useState([]);
+  const [
+    catalog,
+    setCatalog,
+  ] = useState([]);
 
-  const [cashAccount, setCashAccount] = useState(null);
+  const [
+    cashAccount,
+    setCashAccount,
+  ] = useState(null);
 
-  const [dataLoading, setDataLoading] = useState(true);
+  const [
+    dataLoading,
+    setDataLoading,
+  ] = useState(true);
 
   /* =======================================================
      ADD CARD
   ======================================================= */
 
-  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [
+    addModalOpen,
+    setAddModalOpen,
+  ] = useState(false);
 
-  const [addingCard, setAddingCard] = useState(false);
+  const [
+    addingCard,
+    setAddingCard,
+  ] = useState(false);
 
   /* =======================================================
      TRANSFER
   ======================================================= */
 
-  const [transferModalOpen, setTransferModalOpen] = useState(false);
+  const [
+    transferModalOpen,
+    setTransferModalOpen,
+  ] = useState(false);
 
-  const [transferSource, setTransferSource] = useState(null);
+  const [
+    transferSource,
+    setTransferSource,
+  ] = useState(null);
 
-  const [transferring, setTransferring] = useState(false);
+  const [
+    transferring,
+    setTransferring,
+  ] = useState(false);
 
   /* =======================================================
      WALLET BALANCE
   ======================================================= */
 
-  const [walletModalOpen, setWalletModalOpen] = useState(false);
+  const [
+    walletModalOpen,
+    setWalletModalOpen,
+  ] = useState(false);
 
-  const [walletSaving, setWalletSaving] = useState(false);
+  const [
+    walletSaving,
+    setWalletSaving,
+  ] = useState(false);
 
   /* =======================================================
      REMOVE
   ======================================================= */
 
-  const [removingId, setRemovingId] = useState(null);
+  const [
+    removingId,
+    setRemovingId,
+  ] = useState(null);
 
   /* =======================================================
      FONT
   ======================================================= */
 
   useEffect(() => {
-    if (typeof document === "undefined") {
+    if (
+      typeof document ===
+      "undefined"
+    ) {
       return;
     }
 
-    if (document.getElementById(CARD_FONT_ID)) {
+    if (
+      document.getElementById(
+        CARD_FONT_ID,
+      )
+    ) {
       return;
     }
 
-    const link = document.createElement("link");
+    const link =
+      document.createElement(
+        "link",
+      );
 
-    link.id = CARD_FONT_ID;
+    link.id =
+      CARD_FONT_ID;
 
-    link.rel = "stylesheet";
+    link.rel =
+      "stylesheet";
 
-    link.href = CARD_FONT_URL;
+    link.href =
+      CARD_FONT_URL;
 
-    document.head.appendChild(link);
+    document.head.appendChild(
+      link,
+    );
   }, []);
 
   /* =======================================================
      LOAD
   ======================================================= */
 
-  const loadFinance = useCallback(async ({ silent = false } = {}) => {
-    try {
-      if (!silent) {
-        setDataLoading(true);
-      }
+  const loadFinance =
+    useCallback(
+      async ({
+        silent = false,
+      } = {}) => {
+        try {
+          if (!silent) {
+            setDataLoading(
+              true,
+            );
+          }
 
-      const [summaryData, cardsData, catalogData, cashData] = await Promise.all(
-        [
-          getFinanceSummary(),
+          const [
+            summaryData,
+            cardsData,
+            catalogData,
+            cashData,
+          ] =
+            await Promise.all(
+              [
+                getFinanceSummary(),
+                getMemberCards(),
+                getMemberCardCatalog(),
+                getCashAccount(),
+              ],
+            );
 
-          getMemberCards(),
+          setSummary(
+            summaryData || {
+              savings:
+                "0.00",
+              actual_money:
+                "0.00",
+              total_money:
+                "0.00",
+              currency:
+                "PHP",
+            },
+          );
 
-          getMemberCardCatalog(),
+          setCards(
+            Array.isArray(
+              cardsData,
+            )
+              ? cardsData
+              : [],
+          );
 
-          getCashAccount(),
-        ],
-      );
+          setCatalog(
+            Array.isArray(
+              catalogData,
+            )
+              ? catalogData
+              : [],
+          );
 
-      setSummary(
-        summaryData || {
-          savings: "0.00",
+          setCashAccount(
+            cashData ||
+              null,
+          );
+        } catch (
+          error
+        ) {
+          console.error(
+            "Unable to load member finance:",
+            error,
+          );
 
-          actual_money: "0.00",
-
-          total_money: "0.00",
-
-          currency: "PHP",
-        },
-      );
-
-      setCards(Array.isArray(cardsData) ? cardsData : []);
-
-      setCatalog(Array.isArray(catalogData) ? catalogData : []);
-
-      setCashAccount(cashData || null);
-    } catch (error) {
-      console.error("Unable to load member finance:", error);
-
-      toast.error(error?.message || "Unable to load your savings.");
-    } finally {
-      setDataLoading(false);
-    }
-  }, []);
+          toast.error(
+            error?.message ||
+              "Unable to load your savings.",
+          );
+        } finally {
+          setDataLoading(
+            false,
+          );
+        }
+      },
+      [],
+    );
 
   useEffect(() => {
     loadFinance();
-  }, [loadFinance]);
+  }, [
+    loadFinance,
+  ]);
 
   /* =======================================================
      CATALOG
   ======================================================= */
 
-  const existingProviderIds = useMemo(() => {
-    const ids = cards
-      .map((account) => getAccountProviderId(account))
-      .filter((id) => id !== null);
+  const existingProviderIds =
+    useMemo(() => {
+      const ids =
+        cards
+          .map(
+            (
+              account,
+            ) =>
+              getAccountProviderId(
+                account,
+              ),
+          )
+          .filter(
+            (id) =>
+              id !== null,
+          );
 
-    return new Set(ids);
-  }, [cards]);
+      return new Set(
+        ids,
+      );
+    }, [
+      cards,
+    ]);
 
-  const availableCatalog = useMemo(
-    () =>
-      catalog.filter(
-        (provider) => !existingProviderIds.has(Number(provider.id)),
-      ),
-    [catalog, existingProviderIds],
-  );
+  const availableCatalog =
+    useMemo(
+      () =>
+        catalog.filter(
+          (
+            provider,
+          ) =>
+            !existingProviderIds.has(
+              Number(
+                provider.id,
+              ),
+            ),
+        ),
+      [
+        catalog,
+        existingProviderIds,
+      ],
+    );
 
-  const canAddCard = availableCatalog.length > 0;
+  const canAddCard =
+    availableCatalog.length >
+    0;
 
   /* =======================================================
      ADD CARD
   ======================================================= */
 
-  const handleAddCard = async (values) => {
-    if (addingCard) {
-      return;
-    }
+  const handleAddCard =
+    async (
+      values,
+    ) => {
+      if (
+        addingCard
+      ) {
+        return;
+      }
 
-    try {
-      setAddingCard(true);
+      try {
+        setAddingCard(
+          true,
+        );
 
-      await createMemberCard(values);
+        await createMemberCard(
+          values,
+        );
 
-      setAddModalOpen(false);
+        setAddModalOpen(
+          false,
+        );
 
-      toast.success("Savings card added.");
+        toast.success(
+          "Savings card added.",
+        );
 
-      await loadFinance({
-        silent: true,
-      });
-    } catch (error) {
-      console.error("Unable to add member card:", error);
+        await loadFinance({
+          silent: true,
+        });
+      } catch (
+        error
+      ) {
+        console.error(
+          "Unable to add member card:",
+          error,
+        );
 
-      toast.error(error?.message || "Unable to add card.");
-    } finally {
-      setAddingCard(false);
-    }
-  };
+        toast.error(
+          error?.message ||
+            "Unable to add card.",
+        );
+      } finally {
+        setAddingCard(
+          false,
+        );
+      }
+    };
 
-  const handleOpenAdd = () => {
-    if (!canAddCard) {
-      toast("You already added all available cards.");
+  const handleOpenAdd =
+    () => {
+      if (
+        !canAddCard
+      ) {
+        toast(
+          "You already added all available cards.",
+        );
 
-      return;
-    }
+        return;
+      }
 
-    setAddModalOpen(true);
-  };
+      setAddModalOpen(
+        true,
+      );
+    };
 
   /* =======================================================
      WALLET BALANCE
   ======================================================= */
 
-  const handleOpenWalletBalance = () => {
-    setWalletModalOpen(true);
-  };
+  const handleOpenWalletBalance =
+    () => {
+      setWalletModalOpen(
+        true,
+      );
+    };
 
-  const handleSaveWalletBalance = async ({ amount }) => {
-    if (walletSaving) {
-      return;
-    }
+  const handleSaveWalletBalance =
+    async ({
+      amount,
+    }) => {
+      if (
+        walletSaving
+      ) {
+        return;
+      }
 
-    try {
-      setWalletSaving(true);
+      try {
+        setWalletSaving(
+          true,
+        );
 
-      await updateCashBalance(amount);
+        await updateCashBalance(
+          amount,
+        );
 
-      setWalletModalOpen(false);
+        setWalletModalOpen(
+          false,
+        );
 
-      toast.success("Wallet balance updated.");
+        toast.success(
+          "Wallet balance updated.",
+        );
 
-      await loadFinance({
-        silent: true,
-      });
-    } catch (error) {
-      console.error("Unable to update wallet balance:", error);
+        await loadFinance({
+          silent: true,
+        });
+      } catch (
+        error
+      ) {
+        console.error(
+          "Unable to update wallet balance:",
+          error,
+        );
 
-      toast.error(error?.message || "Unable to update wallet.");
-    } finally {
-      setWalletSaving(false);
-    }
-  };
+        toast.error(
+          error?.message ||
+            "Unable to update wallet.",
+        );
+      } finally {
+        setWalletSaving(
+          false,
+        );
+      }
+    };
 
   /* =======================================================
      TRANSFER
   ======================================================= */
 
-  const handleOpenTransfer = (source = null) => {
-    setTransferSource(source);
+  const handleOpenTransfer = (
+    source = null,
+  ) => {
+    setTransferSource(
+      source,
+    );
 
-    setTransferModalOpen(true);
+    setTransferModalOpen(
+      true,
+    );
   };
 
-  const handleOpenWalletTransfer = () => {
-    if (cards.length === 0) {
-      toast("Add a savings card first.");
+  const handleOpenWalletTransfer =
+    () => {
+      if (
+        cards.length ===
+        0
+      ) {
+        toast(
+          "Add a savings card first.",
+        );
 
-      return;
-    }
+        return;
+      }
 
-    handleOpenTransfer({
-      id: cashAccount?.id ?? null,
+      handleOpenTransfer({
+        id:
+          cashAccount?.id ??
+          null,
 
-      type: "cash",
+        type:
+          "cash",
 
-      name: "Datong Wallet",
+        name:
+          "Datong Wallet",
 
-      balance: cashAccount?.balance ?? summary.actual_money ?? "0.00",
-    });
-  };
-
-  const handleTransfer = async (values) => {
-    if (transferring) {
-      return;
-    }
-
-    try {
-      setTransferring(true);
-
-      await createTransfer(values);
-
-      setTransferModalOpen(false);
-
-      setTransferSource(null);
-
-      toast.success("Money transferred successfully.");
-
-      await loadFinance({
-        silent: true,
+        balance:
+          cashAccount
+            ?.balance ??
+          summary
+            .actual_money ??
+          "0.00",
       });
-    } catch (error) {
-      console.error("Unable to transfer money:", error);
+    };
 
-      toast.error(error?.message || "Unable to transfer money.");
-    } finally {
-      setTransferring(false);
-    }
-  };
+  const handleTransfer =
+    async (
+      values,
+    ) => {
+      if (
+        transferring
+      ) {
+        return;
+      }
+
+      try {
+        setTransferring(
+          true,
+        );
+
+        await createTransfer(
+          values,
+        );
+
+        setTransferModalOpen(
+          false,
+        );
+
+        setTransferSource(
+          null,
+        );
+
+        toast.success(
+          "Money transferred successfully.",
+        );
+
+        await loadFinance({
+          silent: true,
+        });
+      } catch (
+        error
+      ) {
+        console.error(
+          "Unable to transfer money:",
+          error,
+        );
+
+        toast.error(
+          error?.message ||
+            "Unable to transfer money.",
+        );
+      } finally {
+        setTransferring(
+          false,
+        );
+      }
+    };
 
   /* =======================================================
      REMOVE CARD
   ======================================================= */
 
-  const handleRemoveCard = async (account) => {
-    if (!account || removingId !== null) {
-      return;
-    }
+  const handleRemoveCard =
+    async (
+      account,
+    ) => {
+      if (
+        !account ||
+        removingId !== null
+      ) {
+        return;
+      }
 
-    const cardName = account?.name || account?.provider?.name || "this card";
+      const cardName =
+        account?.name ||
+        account?.provider
+          ?.name ||
+        "this card";
 
-    const confirmed = await confirmDelete({
-      title: "Remove card?",
+      const confirmed =
+        await confirmDelete({
+          title:
+            "Remove card?",
 
-      text: `Remove ${cardName}? Its ${formatPeso(
-        account?.balance || 0,
-      )} balance will be subtracted from your savings.`,
+          text:
+            `Remove ${cardName}? Its ${formatPeso(
+              account
+                ?.balance ||
+                0,
+            )} balance will be subtracted from your savings.`,
 
-      confirmText: "Remove card",
+          confirmText:
+            "Remove card",
 
-      cancelText: "Cancel",
-    });
+          cancelText:
+            "Cancel",
+        });
 
-    if (!confirmed) {
-      return;
-    }
+      if (
+        !confirmed
+      ) {
+        return;
+      }
 
-    try {
-      setRemovingId(account.id);
+      try {
+        setRemovingId(
+          account.id,
+        );
 
-      await deleteMemberCard(account.id);
+        await deleteMemberCard(
+          account.id,
+        );
 
-      toast.success("Card removed. Savings updated.");
+        toast.success(
+          "Card removed. Savings updated.",
+        );
 
-      await loadFinance({
-        silent: true,
-      });
-    } catch (error) {
-      console.error("Unable to remove member card:", error);
+        await loadFinance({
+          silent: true,
+        });
+      } catch (
+        error
+      ) {
+        console.error(
+          "Unable to remove member card:",
+          error,
+        );
 
-      toast.error(error?.message || "Unable to remove card.");
-    } finally {
-      setRemovingId(null);
-    }
-  };
+        toast.error(
+          error?.message ||
+            "Unable to remove card.",
+        );
+      } finally {
+        setRemovingId(
+          null,
+        );
+      }
+    };
 
   /* =======================================================
      LOADING
   ======================================================= */
 
-  if (loading || dataLoading) {
-    return <CardsSkeleton />;
+  if (
+    loading ||
+    dataLoading
+  ) {
+    return (
+      <CardsSkeleton />
+    );
   }
 
-  const minimumSlots = 8;
+  const minimumSlots =
+    8;
 
-  const emptySlots = Math.max(0, minimumSlots - cards.length);
+  const emptySlots =
+    Math.max(
+      0,
+      minimumSlots -
+        cards.length,
+    );
 
   return (
     <>
       <main
         className="
           relative
-
           mx-auto
-
           min-h-[calc(100vh-120px)]
-
           w-full
           max-w-[1180px]
-
           px-1
           pb-32
           pt-8
-
           sm:px-4
           sm:pb-12
           sm:pt-12
@@ -1835,10 +1880,21 @@ function CardsPage({ loading = false }) {
           "
         >
           <BalanceFlipCard
-            savings={summary.savings || 0}
-            wallet={summary.actual_money || 0}
-            onWalletEdit={handleOpenWalletBalance}
-            onWalletTransfer={handleOpenWalletTransfer}
+            savings={
+              summary.savings ||
+              0
+            }
+            wallet={
+              summary
+                .actual_money ||
+              0
+            }
+            onWalletEdit={
+              handleOpenWalletBalance
+            }
+            onWalletTransfer={
+              handleOpenWalletTransfer
+            }
           />
         </section>
 
@@ -1849,46 +1905,51 @@ function CardsPage({ loading = false }) {
         <section
           className="
             relative
-
             hidden
-
             min-h-[255px]
-
             sm:block
-
             lg:min-h-[220px]
           "
         >
           <div
             className="
               absolute
-
               left-0
               top-0
-
               z-10
             "
           >
             <DatongWalletSummary
-              balance={summary.actual_money || 0}
-              onEdit={handleOpenWalletBalance}
-              onTransfer={handleOpenWalletTransfer}
+              balance={
+                summary
+                  .actual_money ||
+                0
+              }
+              onEdit={
+                handleOpenWalletBalance
+              }
+              onTransfer={
+                handleOpenWalletTransfer
+              }
             />
           </div>
 
           <div
             className="
               mx-auto
-
               w-full
               max-w-[520px]
-
               sm:pt-[185px]
-
               lg:pt-0
             "
           >
-            <SavingsSummary balance={summary.savings || 0} />
+            <SavingsSummary
+              balance={
+                summary
+                  .savings ||
+                0
+              }
+            />
           </div>
         </section>
 
@@ -1900,42 +1961,74 @@ function CardsPage({ loading = false }) {
           className="
             grid
             grid-cols-2
-
             gap-x-3
             gap-y-5
-
             sm:grid-cols-3
             sm:gap-5
-
             lg:grid-cols-4
-
             xl:gap-x-6
             xl:gap-y-7
           "
         >
-          <AnimatePresence mode="popLayout">
-            {cards.map((account) => (
-              <SavingsCard
-                key={account.id}
-                account={account}
-                removing={removingId === account.id}
-                onTransfer={handleOpenTransfer}
-                onRemove={handleRemoveCard}
-              />
-            ))}
+          <AnimatePresence
+            mode="popLayout"
+          >
+            {cards.map(
+              (
+                account,
+              ) => (
+                <SavingsCard
+                  key={
+                    account.id
+                  }
+                  account={
+                    account
+                  }
+                  removing={
+                    removingId ===
+                    account.id
+                  }
+                  onTransfer={
+                    handleOpenTransfer
+                  }
+                  onRemove={
+                    handleRemoveCard
+                  }
+                />
+              ),
+            )}
           </AnimatePresence>
 
           {Array.from({
-            length: emptySlots,
-          }).map((_, index) => {
-            if (index === 0 && canAddCard) {
-              return (
-                <AddCardSlot key={`empty-${index}`} onClick={handleOpenAdd} />
-              );
-            }
+            length:
+              emptySlots,
+          }).map(
+            (
+              _,
+              index,
+            ) => {
+              if (
+                index ===
+                  0 &&
+                canAddCard
+              ) {
+                return (
+                  <AddCardSlot
+                    key={`empty-${index}`}
+                    onClick={
+                      handleOpenAdd
+                    }
+                  />
+                );
+              }
 
-            return <EmptyCardSlot key={`empty-${index}`} />;
-          })}
+              return (
+                <EmptyCardSlot
+                  key={`empty-${index}`}
+                />
+              );
+            },
+          )}
         </section>
       </main>
 
@@ -1946,18 +2039,32 @@ function CardsPage({ loading = false }) {
       <AnimatePresence>
         {addModalOpen && (
           <AddMemberCardModal
-            open={addModalOpen}
-            catalog={catalog}
-            existingCards={cards}
-            submitting={addingCard}
+            open={
+              addModalOpen
+            }
+            catalog={
+              catalog
+            }
+            existingCards={
+              cards
+            }
+            submitting={
+              addingCard
+            }
             onClose={() => {
-              if (addingCard) {
+              if (
+                addingCard
+              ) {
                 return;
               }
 
-              setAddModalOpen(false);
+              setAddModalOpen(
+                false,
+              );
             }}
-            onSubmit={handleAddCard}
+            onSubmit={
+              handleAddCard
+            }
           />
         )}
       </AnimatePresence>
@@ -1969,17 +2076,29 @@ function CardsPage({ loading = false }) {
       <AnimatePresence>
         {walletModalOpen && (
           <WalletBalanceModal
-            open={walletModalOpen}
-            cashAccount={cashAccount}
-            submitting={walletSaving}
+            open={
+              walletModalOpen
+            }
+            cashAccount={
+              cashAccount
+            }
+            submitting={
+              walletSaving
+            }
             onClose={() => {
-              if (walletSaving) {
+              if (
+                walletSaving
+              ) {
                 return;
               }
 
-              setWalletModalOpen(false);
+              setWalletModalOpen(
+                false,
+              );
             }}
-            onSubmit={handleSaveWalletBalance}
+            onSubmit={
+              handleSaveWalletBalance
+            }
           />
         )}
       </AnimatePresence>
@@ -1991,21 +2110,39 @@ function CardsPage({ loading = false }) {
       <AnimatePresence>
         {transferModalOpen && (
           <TransferMoneyModal
-            open={transferModalOpen}
-            cards={cards}
-            cashAccount={cashAccount}
-            initialSource={transferSource}
-            submitting={transferring}
+            open={
+              transferModalOpen
+            }
+            cards={
+              cards
+            }
+            cashAccount={
+              cashAccount
+            }
+            initialSource={
+              transferSource
+            }
+            submitting={
+              transferring
+            }
             onClose={() => {
-              if (transferring) {
+              if (
+                transferring
+              ) {
                 return;
               }
 
-              setTransferModalOpen(false);
+              setTransferModalOpen(
+                false,
+              );
 
-              setTransferSource(null);
+              setTransferSource(
+                null,
+              );
             }}
-            onSubmit={handleTransfer}
+            onSubmit={
+              handleTransfer
+            }
           />
         )}
       </AnimatePresence>
