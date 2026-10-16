@@ -3,8 +3,13 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CardController;
 use App\Http\Controllers\Api\MemberAuthController;
+use App\Http\Controllers\Api\MemberCardController;
 use App\Http\Controllers\Api\MemberController;
+use App\Http\Controllers\Api\MemberFinanceController;
+use App\Http\Controllers\Api\MemberTransferController;
 use App\Http\Controllers\Api\UserController;
+
+use App\Http\Middleware\ResolveFirebaseMember;
 
 use Illuminate\Support\Facades\Route;
 
@@ -17,8 +22,6 @@ use Illuminate\Support\Facades\Route;
 
    Laravel receives:
    Authorization: Bearer <Firebase ID Token>
-
-   MemberAuthController verifies the Firebase token.
 ========================================================= */
 
 Route::prefix('member-auth')
@@ -49,25 +52,135 @@ Route::prefix('member-auth')
     });
 
 /* =========================================================
+   MEMBER FINANCE
+
+   Firebase authenticated members only.
+
+   Cards = Savings
+   Cash  = Actual Money
+========================================================= */
+
+Route::middleware(
+    ResolveFirebaseMember::class
+)
+    ->prefix('member-finance')
+    ->group(function () {
+        /* =================================================
+           SUMMARY
+
+           GET /api/member-finance/summary
+        ================================================= */
+
+        Route::get(
+            '/summary',
+            [
+                MemberFinanceController::class,
+                'summary',
+            ]
+        );
+
+        /* =================================================
+           MEMBER CARD CATALOG
+
+           Active providers only.
+
+           GET /api/member-finance/card-catalog
+        ================================================= */
+
+        Route::get(
+            '/card-catalog',
+            [
+                MemberFinanceController::class,
+                'cardCatalog',
+            ]
+        );
+
+        /* =================================================
+           ON-HAND CASH
+
+           GET /api/member-finance/cash
+        ================================================= */
+
+        Route::get(
+            '/cash',
+            [
+                MemberFinanceController::class,
+                'cash',
+            ]
+        );
+
+        /* =================================================
+           MEMBER CARDS / SAVINGS
+
+           GET    /api/member-finance/cards
+           POST   /api/member-finance/cards
+           PUT    /api/member-finance/cards/{memberCardId}
+           DELETE /api/member-finance/cards/{memberCardId}
+        ================================================= */
+
+        Route::get(
+            '/cards',
+            [
+                MemberCardController::class,
+                'index',
+            ]
+        );
+
+        Route::post(
+            '/cards',
+            [
+                MemberCardController::class,
+                'store',
+            ]
+        );
+
+        Route::put(
+            '/cards/{memberCardId}',
+            [
+                MemberCardController::class,
+                'update',
+            ]
+        );
+
+        Route::delete(
+            '/cards/{memberCardId}',
+            [
+                MemberCardController::class,
+                'destroy',
+            ]
+        );
+
+        /* =================================================
+           TRANSFERS
+
+           GET  /api/member-finance/transfers
+           POST /api/member-finance/transfers
+        ================================================= */
+
+        Route::get(
+            '/transfers',
+            [
+                MemberTransferController::class,
+                'index',
+            ]
+        );
+
+        Route::post(
+            '/transfers',
+            [
+                MemberTransferController::class,
+                'store',
+            ]
+        );
+    });
+
+/* =========================================================
    INTERNAL AUTH
-
-   Existing Laravel session authentication for:
-
-   - Admin
-   - Finance
-   - Staff
-   - Viewer
-
-   Firebase Members DO NOT authenticate here.
 ========================================================= */
 
 Route::middleware('web')
     ->prefix('auth')
     ->group(function () {
-        /* =================================================
-           CSRF
-        ================================================= */
-
         Route::get(
             '/csrf',
             [
@@ -75,10 +188,6 @@ Route::middleware('web')
                 'csrf',
             ]
         );
-
-        /* =================================================
-           INTERNAL LOGIN
-        ================================================= */
 
         Route::post(
             '/login',
@@ -118,18 +227,7 @@ Route::middleware([
     );
 
     /* =====================================================
-       CARD CATALOG
-
-       Internal users manage the available card templates.
-
-       POST update is intentional because updates may contain
-       multipart/form-data image files.
-
-       GET    /api/card-catalog
-       POST   /api/card-catalog
-       GET    /api/card-catalog/{card}
-       POST   /api/card-catalog/{card}
-       DELETE /api/card-catalog/{card}
+       ADMIN CARD CATALOG
     ===================================================== */
 
     Route::get(
@@ -174,12 +272,6 @@ Route::middleware([
 
     /* =====================================================
        USERS
-
-       Internal Datong users:
-       - Admin
-       - Finance
-       - Staff
-       - Viewer
     ===================================================== */
 
     Route::get(
@@ -216,8 +308,6 @@ Route::middleware([
 
     /* =====================================================
        MEMBERS
-
-       Internal dashboard read-only member management.
     ===================================================== */
 
     Route::get(

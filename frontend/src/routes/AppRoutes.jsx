@@ -4,6 +4,8 @@ import { useAuth } from "../auth/AuthContext";
 
 import Dashboard from "../pages/Dashboard";
 
+import CardsPage from "../pages/cards/CardsPage";
+
 import CardCatalogPage from "../pages/cards/CardCatalogPage";
 
 import UsersPage from "../pages/users/UsersPage";
@@ -28,7 +30,7 @@ export const PAGE_META = {
     id: "cards",
     path: "/cards",
     title: "Cards",
-    description: "Manage cards and financial accounts",
+    description: "Manage savings and actual money",
   },
 
   cardCatalog: {
@@ -148,27 +150,44 @@ export function getPageMeta(pathname) {
 }
 
 /* =========================================================
-   INTERNAL-ONLY ROUTE
-
-   Firebase/public Members must NEVER access:
-
-   /card-catalog
-   /users
-   /members
-   /members/:memberId
+   IS MEMBER
 ========================================================= */
 
-function InternalOnlyRoute({ children }) {
-  const { user, authType, isMember } = useAuth();
-
+function isPublicMember({ user, authType, isMember }) {
   const memberRole =
     String(user?.role || "")
       .trim()
       .toLowerCase() === "member";
 
-  const publicMember = isMember === true || authType === "member" || memberRole;
+  return isMember === true || authType === "member" || memberRole;
+}
 
-  if (publicMember) {
+/* =========================================================
+   MEMBER ONLY
+
+   Cards / personal finance belongs to the Firebase Member.
+
+   Internal staff are redirected to Card Catalog instead.
+========================================================= */
+
+function MemberOnlyRoute({ children }) {
+  const auth = useAuth();
+
+  if (!isPublicMember(auth)) {
+    return <Navigate to="/card-catalog" replace />;
+  }
+
+  return children;
+}
+
+/* =========================================================
+   INTERNAL ONLY
+========================================================= */
+
+function InternalOnlyRoute({ children }) {
+  const auth = useAuth();
+
+  if (isPublicMember(auth)) {
     return <Navigate to="/" replace />;
   }
 
@@ -181,9 +200,22 @@ function InternalOnlyRoute({ children }) {
 
 function ModulePlaceholderSkeleton() {
   return (
-    <div className="mx-auto w-full max-w-[1600px]">
+    <div
+      className="
+        mx-auto
+        w-full
+        max-w-[1600px]
+      "
+    >
       <div className="mb-6">
-        <div className="mb-4 flex items-center gap-2">
+        <div
+          className="
+            mb-4
+            flex
+            items-center
+            gap-2
+          "
+        >
           <div className="h-2.5 w-10 animate-pulse rounded-md bg-gray-200" />
 
           <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-gray-200" />
@@ -198,8 +230,26 @@ function ModulePlaceholderSkeleton() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white p-6">
-        <div className="flex min-h-[360px] items-center justify-center">
+      <div
+        className="
+          rounded-xl
+
+          border
+          border-gray-200
+
+          bg-white
+
+          p-6
+        "
+      >
+        <div
+          className="
+            flex
+            min-h-[360px]
+            items-center
+            justify-center
+          "
+        >
           <div className="w-full max-w-[320px]">
             <div className="mx-auto h-11 w-11 animate-pulse rounded-xl bg-gray-200" />
 
@@ -225,20 +275,88 @@ function ModulePlaceholder({ title, description, loading = false }) {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1600px]">
-      <div className="flex min-h-[420px] items-center justify-center rounded-xl border border-gray-200 bg-white p-6">
-        <div className="max-w-[320px] text-center">
-          <div className="mx-auto mb-4 h-10 w-10 rounded-xl bg-gray-100" />
+    <div
+      className="
+        mx-auto
+        w-full
+        max-w-[1600px]
+      "
+    >
+      <div
+        className="
+          flex
+          min-h-[420px]
+          items-center
+          justify-center
 
-          <p className="text-[14px] font-semibold text-gray-900">{title}</p>
+          rounded-xl
 
-          <p className="mt-1.5 text-[11px] leading-5 text-gray-400">
+          border
+          border-gray-200
+
+          bg-white
+
+          p-6
+        "
+      >
+        <div
+          className="
+            max-w-[320px]
+            text-center
+          "
+        >
+          <div
+            className="
+              mx-auto
+              mb-4
+              h-10
+              w-10
+
+              rounded-xl
+
+              bg-gray-100
+            "
+          />
+
+          <p
+            className="
+              text-[14px]
+              font-semibold
+              text-gray-900
+            "
+          >
+            {title}
+          </p>
+
+          <p
+            className="
+              mt-1.5
+
+              text-[11px]
+              leading-5
+              text-gray-400
+            "
+          >
             {description}
           </p>
 
-          <div className="mx-auto mt-5 h-px w-10 bg-gray-200" />
+          <div
+            className="
+              mx-auto
+              mt-5
+              h-px
+              w-10
+              bg-gray-200
+            "
+          />
 
-          <p className="mt-4 text-[10px] text-gray-400">
+          <p
+            className="
+              mt-4
+              text-[10px]
+              text-gray-400
+            "
+          >
             This module will be implemented next.
           </p>
         </div>
@@ -266,17 +384,18 @@ function AppRoutes({ loading = false }) {
       {/* ===================================================
           CARDS
 
-          Member/user personal financial cards.
+          FIREBASE MEMBERS ONLY.
+
+          Cards = Savings
+          Cash = Actual Money
       =================================================== */}
 
       <Route
         path={PAGE_META.cards.path}
         element={
-          <ModulePlaceholder
-            loading={loading}
-            title={PAGE_META.cards.title}
-            description="Manage your cards, balances and connected financial accounts."
-          />
+          <MemberOnlyRoute>
+            <CardsPage loading={loading} />
+          </MemberOnlyRoute>
         }
       />
 
@@ -311,7 +430,9 @@ function AppRoutes({ loading = false }) {
       />
 
       {/* ===================================================
-          SAVINGS
+          SAVINGS GOALS
+
+          NOT CONNECTED YET
       =================================================== */}
 
       <Route
@@ -359,11 +480,6 @@ function AppRoutes({ loading = false }) {
           CARD CATALOG
 
           INTERNAL USERS ONLY.
-
-          Admin/internal staff configure available
-          bank and e-wallet templates here.
-
-          Firebase Members cannot access this page.
       =================================================== */}
 
       <Route
