@@ -1,277 +1,1247 @@
 import {
   ArrowDownLeft,
+  ArrowRight,
+  ArrowRightLeft,
   ArrowUpRight,
   ChevronRight,
   CreditCard,
-  Ellipsis,
-  Eye,
   Landmark,
-  MoreHorizontal,
+  LoaderCircle,
   Plus,
   ReceiptText,
-  Send,
+  RefreshCw,
   Wallet,
 } from "lucide-react";
+
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import { useNavigate } from "react-router-dom";
+
+import { useAuth } from "../auth/AuthContext";
 
 import PageHeader from "../components/PageHeader";
 import { DashboardSkeleton } from "../components/SkeletonLoader";
 
+import {
+  getFinanceSummary,
+  getMemberCards,
+  getMemberTransfers,
+} from "../services/memberFinanceApi";
+
+import datongWalletImage from "../assets/datong_wallet.webp";
+
 /* =========================================================
-   SUMMARY DATA
+   MONEY
 ========================================================= */
 
-const summaryCards = [
-  {
-    title: "Total balance",
-    value: "₱284,560.00",
-    change: "+12.4%",
-    description: "vs. last month",
-    icon: Wallet,
-    primary: true,
-  },
+function formatPeso(value) {
+  const amount = Number(value || 0);
 
-  {
-    title: "Income",
-    value: "₱124,800.00",
-    change: "+8.2%",
-    description: "this month",
-    icon: ArrowDownLeft,
-  },
+  return new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number.isFinite(amount) ? amount : 0);
+}
 
-  {
-    title: "Expenses",
-    value: "₱68,240.00",
-    change: "-4.1%",
-    description: "this month",
-    icon: ArrowUpRight,
-  },
+/* =========================================================
+   DATE
+========================================================= */
 
-  {
-    title: "Savings",
-    value: "₱56,560.00",
-    change: "+16.8%",
-    description: "this month",
-    icon: Landmark,
-  },
-];
+function formatTransactionDate(value) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("en-PH", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
+}
+
+/* =========================================================
+   MEMBER DATA LOADING
+========================================================= */
+
+function MemberDashboardLoading() {
+  return (
+    <div className="space-y-5 animate-pulse">
+      {/* WALLET */}
+
+      <div className="h-[230px] rounded-[24px] bg-gray-200" />
+
+      {/* CARDS */}
+
+      <div>
+        <div className="mb-3 flex items-center justify-between">
+          <div className="h-5 w-24 rounded bg-gray-200" />
+
+          <div className="h-4 w-16 rounded bg-gray-200" />
+        </div>
+
+        <div className="flex gap-3 overflow-hidden">
+          <div className="h-[170px] w-[82%] shrink-0 rounded-[20px] bg-gray-200 sm:w-[330px]" />
+
+          <div className="h-[170px] w-[82%] shrink-0 rounded-[20px] bg-gray-200 sm:w-[330px]" />
+        </div>
+      </div>
+
+      {/* TRANSACTIONS */}
+
+      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+        <div className="border-b border-gray-100 p-4">
+          <div className="h-5 w-32 rounded bg-gray-200" />
+        </div>
+
+        <div className="space-y-0">
+          {[1, 2, 3, 4].map((item) => (
+            <div
+              key={item}
+              className="flex items-center gap-3 border-b border-gray-100 p-4 last:border-0"
+            >
+              <div className="h-10 w-10 rounded-xl bg-gray-200" />
+
+              <div className="flex-1">
+                <div className="h-3 w-32 rounded bg-gray-200" />
+                <div className="mt-2 h-2.5 w-20 rounded bg-gray-100" />
+              </div>
+
+              <div className="h-3 w-16 rounded bg-gray-200" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
+   WALLET HERO
+========================================================= */
+
+function WalletHero({
+  summary,
+  onCards,
+  onTransactions,
+}) {
+  return (
+    <section
+      className="
+        relative
+        overflow-hidden
+        rounded-[24px]
+        bg-black
+        text-white
+        shadow-[0_18px_45px_rgba(0,0,0,0.12)]
+      "
+    >
+      {/* BACKGROUND */}
+
+      <div
+        aria-hidden="true"
+        className="
+          pointer-events-none
+          absolute
+          -right-16
+          -top-10
+          h-[280px]
+          w-[280px]
+          opacity-[0.17]
+        "
+      >
+        <img
+          src={datongWalletImage}
+          alt=""
+          className="h-full w-full object-contain"
+        />
+      </div>
+
+      <div
+        aria-hidden="true"
+        className="
+          pointer-events-none
+          absolute
+          inset-0
+          bg-gradient-to-br
+          from-white/[0.08]
+          via-transparent
+          to-white/[0.03]
+        "
+      />
+
+      {/* CONTENT */}
+
+      <div className="relative z-10 p-5 sm:p-6">
+        {/* TOP */}
+
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <div
+                className="
+                  flex
+                  h-8
+                  w-8
+                  items-center
+                  justify-center
+                  rounded-xl
+                  bg-white/10
+                "
+              >
+                <Wallet
+                  size={15}
+                  strokeWidth={1.7}
+                />
+              </div>
+
+              <span
+                className="
+                  text-[10px]
+                  font-semibold
+                  uppercase
+                  tracking-[0.14em]
+                  text-white/50
+                "
+              >
+                Datong Wallet
+              </span>
+            </div>
+          </div>
+
+          <span
+            className="
+              rounded-full
+              border
+              border-white/10
+              bg-white/[0.08]
+              px-2.5
+              py-1
+              text-[9px]
+              font-medium
+              text-white/65
+            "
+          >
+            PHP
+          </span>
+        </div>
+
+        {/* BALANCE */}
+
+        <div className="mt-8">
+          <p className="text-[10px] font-medium text-white/45">
+            Available wallet balance
+          </p>
+
+          <h1
+            className="
+              mt-1.5
+              text-[30px]
+              font-semibold
+              leading-none
+              tracking-[-0.045em]
+              sm:text-[36px]
+            "
+          >
+            {formatPeso(
+              summary?.actual_money,
+            )}
+          </h1>
+        </div>
+
+        {/* TOTALS */}
+
+        <div
+          className="
+            mt-7
+            grid
+            grid-cols-2
+            divide-x
+            divide-white/10
+            rounded-2xl
+            border
+            border-white/10
+            bg-white/[0.06]
+            backdrop-blur-sm
+          "
+        >
+          <div className="p-3.5">
+            <p className="text-[9px] text-white/40">
+              Savings
+            </p>
+
+            <p className="mt-1 text-[12px] font-semibold text-white">
+              {formatPeso(
+                summary?.savings,
+              )}
+            </p>
+          </div>
+
+          <div className="p-3.5">
+            <p className="text-[9px] text-white/40">
+              Total money
+            </p>
+
+            <p className="mt-1 text-[12px] font-semibold text-white">
+              {formatPeso(
+                summary?.total_money,
+              )}
+            </p>
+          </div>
+        </div>
+
+        {/* ACTIONS */}
+
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={onCards}
+            className="
+              flex
+              h-10
+              items-center
+              justify-center
+              gap-2
+              rounded-xl
+              bg-white
+              px-4
+              text-[10px]
+              font-semibold
+              text-black
+              transition
+              active:scale-[0.98]
+            "
+          >
+            <CreditCard
+              size={14}
+              strokeWidth={1.7}
+            />
+
+            My cards
+          </button>
+
+          <button
+            type="button"
+            onClick={onTransactions}
+            className="
+              flex
+              h-10
+              items-center
+              justify-center
+              gap-2
+              rounded-xl
+              border
+              border-white/10
+              bg-white/[0.08]
+              px-4
+              text-[10px]
+              font-semibold
+              text-white
+              transition
+              active:scale-[0.98]
+            "
+          >
+            <ArrowRightLeft
+              size={14}
+              strokeWidth={1.7}
+            />
+
+            Transactions
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* =========================================================
+   MEMBER CARD
+========================================================= */
+
+function MemberCard({
+  card,
+  onClick,
+}) {
+  const provider =
+    card?.provider || {};
+
+  const image =
+    provider?.landscape_image_url ||
+    provider?.portrait_image_url ||
+    "";
+
+  const cardName =
+    card?.name ||
+    provider?.name ||
+    "Savings";
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="
+        relative
+        h-[175px]
+        w-[84vw]
+        max-w-[340px]
+        shrink-0
+        snap-start
+        overflow-hidden
+        rounded-[20px]
+        border
+        border-gray-200
+        bg-[#151515]
+        text-left
+        shadow-sm
+        transition
+        active:scale-[0.985]
+        sm:w-[330px]
+      "
+    >
+      {/* IMAGE */}
+
+      {image ? (
+        <img
+          src={image}
+          alt={provider?.name || cardName}
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      ) : (
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-950 via-gray-800 to-black" />
+      )}
+
+      {/* OVERLAY */}
+
+      <div
+        className="
+          absolute
+          inset-0
+          bg-gradient-to-t
+          from-black/80
+          via-black/20
+          to-black/5
+        "
+      />
+
+      {/* CONTENT */}
+
+      <div className="absolute inset-0 flex flex-col justify-between p-4">
+        <div className="flex items-start justify-between">
+          <span
+            className="
+              rounded-full
+              border
+              border-white/15
+              bg-black/20
+              px-2.5
+              py-1
+              text-[9px]
+              font-medium
+              text-white
+              backdrop-blur-md
+            "
+          >
+            {provider?.name || "Savings"}
+          </span>
+
+          <ChevronRight
+            size={17}
+            className="text-white/70"
+          />
+        </div>
+
+        <div>
+          <p className="truncate text-[10px] font-medium text-white/65">
+            {cardName}
+          </p>
+
+          <p className="mt-1 text-[20px] font-semibold tracking-[-0.03em] text-white">
+            {formatPeso(card?.balance)}
+          </p>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+/* =========================================================
+   CARDS SECTION
+========================================================= */
+
+function CardsSection({
+  cards,
+  onViewAll,
+}) {
+  return (
+    <section>
+      {/* HEADER */}
+
+      <div className="mb-3 flex items-end justify-between">
+        <div>
+          <h2 className="text-[15px] font-semibold tracking-[-0.02em] text-gray-950">
+            My cards
+          </h2>
+
+          <p className="mt-0.5 text-[10px] text-gray-400">
+            {cards.length > 0
+              ? `${cards.length} savings ${
+                  cards.length === 1
+                    ? "account"
+                    : "accounts"
+                }`
+              : "Your savings accounts"}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={onViewAll}
+          className="
+            flex
+            items-center
+            gap-1
+            text-[10px]
+            font-medium
+            text-gray-500
+            transition-colors
+            hover:text-black
+          "
+        >
+          View all
+
+          <ChevronRight size={13} />
+        </button>
+      </div>
+
+      {/* CARDS */}
+
+      {cards.length > 0 ? (
+        <div
+          className="
+            -mx-4
+            flex
+            snap-x
+            snap-mandatory
+            gap-3
+            overflow-x-auto
+            px-4
+            pb-2
+            sm:mx-0
+            sm:px-0
+          "
+        >
+          {cards.map((card) => (
+            <MemberCard
+              key={card.id}
+              card={card}
+              onClick={onViewAll}
+            />
+          ))}
+
+          {/* ADD CARD */}
+
+          <button
+            type="button"
+            onClick={onViewAll}
+            className="
+              flex
+              h-[175px]
+              w-[145px]
+              shrink-0
+              snap-start
+              flex-col
+              items-center
+              justify-center
+              rounded-[20px]
+              border
+              border-dashed
+              border-gray-300
+              bg-white
+              text-gray-400
+              transition
+              hover:border-gray-400
+              hover:text-gray-800
+            "
+          >
+            <div
+              className="
+                flex
+                h-10
+                w-10
+                items-center
+                justify-center
+                rounded-full
+                bg-gray-100
+              "
+            >
+              <Plus
+                size={17}
+                strokeWidth={1.7}
+              />
+            </div>
+
+            <span className="mt-2 text-[10px] font-medium">
+              Add card
+            </span>
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={onViewAll}
+          className="
+            flex
+            w-full
+            items-center
+            gap-4
+            rounded-2xl
+            border
+            border-dashed
+            border-gray-300
+            bg-white
+            p-4
+            text-left
+            transition
+            hover:border-gray-400
+          "
+        >
+          <div
+            className="
+              flex
+              h-11
+              w-11
+              shrink-0
+              items-center
+              justify-center
+              rounded-xl
+              bg-gray-100
+              text-gray-600
+            "
+          >
+            <CreditCard
+              size={18}
+              strokeWidth={1.6}
+            />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-semibold text-gray-900">
+              Add your first card
+            </p>
+
+            <p className="mt-1 text-[9px] leading-4 text-gray-400">
+              Add a bank or e-wallet to start tracking your savings.
+            </p>
+          </div>
+
+          <ChevronRight
+            size={16}
+            className="shrink-0 text-gray-300"
+          />
+        </button>
+      )}
+    </section>
+  );
+}
+
+/* =========================================================
+   TRANSACTION ITEM
+========================================================= */
+
+function TransactionItem({
+  transaction,
+}) {
+  const from =
+    transaction?.from_name ||
+    (transaction?.from_type === "cash"
+      ? "Datong Wallet"
+      : "Account");
+
+  const to =
+    transaction?.to_name ||
+    (transaction?.to_type === "cash"
+      ? "Datong Wallet"
+      : "Account");
+
+  return (
+    <div
+      className="
+        flex
+        items-center
+        gap-3
+        border-b
+        border-gray-100
+        px-4
+        py-3.5
+        last:border-0
+        sm:px-5
+      "
+    >
+      {/* ICON */}
+
+      <div
+        className="
+          flex
+          h-10
+          w-10
+          shrink-0
+          items-center
+          justify-center
+          rounded-xl
+          bg-gray-100
+          text-gray-700
+        "
+      >
+        <ArrowRightLeft
+          size={16}
+          strokeWidth={1.6}
+        />
+      </div>
+
+      {/* INFO */}
+
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 items-center gap-1">
+          <span className="truncate text-[10px] font-medium text-gray-800">
+            {from}
+          </span>
+
+          <ArrowRight
+            size={10}
+            className="shrink-0 text-gray-300"
+          />
+
+          <span className="truncate text-[10px] font-medium text-gray-800">
+            {to}
+          </span>
+        </div>
+
+        <div className="mt-1 flex items-center gap-2">
+          <span className="text-[9px] text-gray-400">
+            {formatTransactionDate(
+              transaction?.created_at,
+            )}
+          </span>
+
+          {transaction?.note && (
+            <>
+              <span className="h-0.5 w-0.5 rounded-full bg-gray-300" />
+
+              <span className="max-w-[130px] truncate text-[9px] text-gray-400">
+                {transaction.note}
+              </span>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* AMOUNT */}
+
+      <p className="shrink-0 text-[11px] font-semibold text-gray-950">
+        {formatPeso(
+          transaction?.amount,
+        )}
+      </p>
+    </div>
+  );
+}
 
 /* =========================================================
    TRANSACTIONS
 ========================================================= */
 
-const transactions = [
-  {
-    id: 1,
-    name: "Office supplies",
-    category: "Business",
-    date: "Oct 14, 2026",
-    amount: "-₱4,250.00",
-    type: "expense",
-  },
-
-  {
-    id: 2,
-    name: "Client payment",
-    category: "Income",
-    date: "Oct 13, 2026",
-    amount: "+₱48,500.00",
-    type: "income",
-  },
-
-  {
-    id: 3,
-    name: "Internet payment",
-    category: "Utilities",
-    date: "Oct 12, 2026",
-    amount: "-₱2,499.00",
-    type: "expense",
-  },
-
-  {
-    id: 4,
-    name: "Software subscription",
-    category: "Software",
-    date: "Oct 11, 2026",
-    amount: "-₱1,850.00",
-    type: "expense",
-  },
-
-  {
-    id: 5,
-    name: "Project deposit",
-    category: "Income",
-    date: "Oct 10, 2026",
-    amount: "+₱32,000.00",
-    type: "income",
-  },
-];
-
-/* =========================================================
-   BUDGET
-========================================================= */
-
-const budgets = [
-  {
-    label: "Business",
-    spent: "₱24,500",
-    total: "₱40,000",
-    progress: 61,
-  },
-
-  {
-    label: "Utilities",
-    spent: "₱8,200",
-    total: "₱15,000",
-    progress: 55,
-  },
-
-  {
-    label: "Software",
-    spent: "₱6,400",
-    total: "₱12,000",
-    progress: 53,
-  },
-
-  {
-    label: "Marketing",
-    spent: "₱11,800",
-    total: "₱25,000",
-    progress: 47,
-  },
-];
-
-/* =========================================================
-   CASH FLOW
-========================================================= */
-
-const cashFlow = [
-  {
-    month: "May",
-    income: 60,
-    expense: 39,
-  },
-  {
-    month: "Jun",
-    income: 76,
-    expense: 52,
-  },
-  {
-    month: "Jul",
-    income: 68,
-    expense: 44,
-  },
-  {
-    month: "Aug",
-    income: 88,
-    expense: 56,
-  },
-  {
-    month: "Sep",
-    income: 80,
-    expense: 49,
-  },
-  {
-    month: "Oct",
-    income: 96,
-    expense: 58,
-  },
-];
-
-/* =========================================================
-   SUMMARY CARD
-========================================================= */
-
-function SummaryCard({
-  title,
-  value,
-  change,
-  description,
-  icon: Icon,
-  primary,
+function TransactionsSection({
+  transactions,
+  onViewAll,
 }) {
+  const recent =
+    transactions.slice(0, 5);
+
   return (
-    <article
-      className={`
-        rounded-xl
+    <section
+      className="
+        overflow-hidden
+        rounded-2xl
         border
-        p-5
-        transition-all
-        duration-200
-
-        ${
-          primary
-            ? "border-black bg-black text-white"
-            : "border-gray-200 bg-white text-gray-950 hover:border-gray-300"
-        }
-      `}
+        border-gray-200
+        bg-white
+        shadow-[0_1px_2px_rgba(0,0,0,0.02)]
+      "
     >
-      <div className="flex items-start justify-between">
+      {/* HEADER */}
+
+      <div
+        className="
+          flex
+          items-center
+          justify-between
+          border-b
+          border-gray-100
+          px-4
+          py-4
+          sm:px-5
+        "
+      >
         <div>
-          <p
-            className={`text-[11px] font-medium ${
-              primary ? "text-white/55" : "text-gray-500"
-            }`}
-          >
-            {title}
-          </p>
+          <h2 className="text-[13px] font-semibold text-gray-950">
+            Recent transactions
+          </h2>
 
-          <p className="mt-2 text-[22px] font-semibold tracking-[-0.03em]">
-            {value}
+          <p className="mt-0.5 text-[9px] text-gray-400">
+            Your latest money movements
           </p>
         </div>
 
-        <div
-          className={`
+        <button
+          type="button"
+          onClick={onViewAll}
+          className="
             flex
-            h-9
-            w-9
             items-center
-            justify-center
-            rounded-lg
-
-            ${primary ? "bg-white/10 text-white" : "bg-gray-100 text-gray-600"}
-          `}
+            gap-1
+            text-[10px]
+            font-medium
+            text-gray-500
+            transition-colors
+            hover:text-black
+          "
         >
-          <Icon size={16} strokeWidth={1.6} />
+          View all
+
+          <ChevronRight size={13} />
+        </button>
+      </div>
+
+      {/* LIST */}
+
+      {recent.length > 0 ? (
+        <div>
+          {recent.map(
+            (transaction) => (
+              <TransactionItem
+                key={transaction.id}
+                transaction={
+                  transaction
+                }
+              />
+            ),
+          )}
         </div>
-      </div>
+      ) : (
+        <div className="px-5 py-10 text-center">
+          <div
+            className="
+              mx-auto
+              flex
+              h-11
+              w-11
+              items-center
+              justify-center
+              rounded-xl
+              bg-gray-100
+              text-gray-400
+            "
+          >
+            <ReceiptText
+              size={18}
+              strokeWidth={1.6}
+            />
+          </div>
 
-      <div className="mt-5 flex items-center gap-1.5">
-        <span
-          className={`text-[10px] font-semibold ${
-            primary ? "text-white" : "text-gray-900"
-          }`}
-        >
-          {change}
-        </span>
+          <p className="mt-3 text-[11px] font-semibold text-gray-800">
+            No transactions yet
+          </p>
 
-        <span
-          className={`text-[10px] ${
-            primary ? "text-white/40" : "text-gray-400"
-          }`}
-        >
-          {description}
-        </span>
-      </div>
-    </article>
+          <p className="mx-auto mt-1 max-w-[230px] text-[9px] leading-4 text-gray-400">
+            Transfers between your wallet and savings cards will appear here.
+          </p>
+        </div>
+      )}
+    </section>
   );
 }
 
 /* =========================================================
-   DASHBOARD
+   MEMBER DASHBOARD
 ========================================================= */
 
-function Dashboard({ loading = false }) {
-  if (loading) {
-    return <DashboardSkeleton />;
+function MemberDashboard() {
+  const navigate = useNavigate();
+
+  const [summary, setSummary] =
+    useState({
+      savings: "0.00",
+      actual_money: "0.00",
+      total_money: "0.00",
+      currency: "PHP",
+    });
+
+  const [cards, setCards] =
+    useState([]);
+
+  const [
+    transactions,
+    setTransactions,
+  ] = useState([]);
+
+  const [
+    dataLoading,
+    setDataLoading,
+  ] = useState(true);
+
+  const [
+    loadError,
+    setLoadError,
+  ] = useState("");
+
+  /* =======================================================
+     LOAD DATA
+  ======================================================= */
+
+  const loadDashboard =
+    useCallback(async () => {
+      try {
+        setDataLoading(true);
+        setLoadError("");
+
+        const [
+          summaryData,
+          cardsData,
+          transactionsData,
+        ] = await Promise.all([
+          getFinanceSummary(),
+          getMemberCards(),
+          getMemberTransfers(),
+        ]);
+
+        setSummary(
+          summaryData || {
+            savings: "0.00",
+            actual_money: "0.00",
+            total_money: "0.00",
+            currency: "PHP",
+          },
+        );
+
+        setCards(
+          Array.isArray(cardsData)
+            ? cardsData
+            : [],
+        );
+
+        setTransactions(
+          Array.isArray(
+            transactionsData,
+          )
+            ? transactionsData
+            : [],
+        );
+      } catch (error) {
+        console.error(
+          "Unable to load dashboard:",
+          error,
+        );
+
+        setLoadError(
+          error?.message ||
+            "Unable to load your financial information.",
+        );
+      } finally {
+        setDataLoading(false);
+      }
+    }, []);
+
+  useEffect(() => {
+    loadDashboard();
+  }, [loadDashboard]);
+
+  /* =======================================================
+     MOBILE BALANCE INFO
+  ======================================================= */
+
+  const cardCountText =
+    useMemo(() => {
+      if (cards.length === 1) {
+        return "1 card";
+      }
+
+      return `${cards.length} cards`;
+    }, [cards.length]);
+
+  /* =======================================================
+     LOADING
+  ======================================================= */
+
+  if (dataLoading) {
+    return (
+      <div className="mx-auto w-full max-w-[1200px]">
+        <div className="hidden lg:block">
+          <PageHeader
+            breadcrumbs={[
+              {
+                label: "Home",
+                href: "#",
+              },
+              {
+                label:
+                  "Dashboard",
+              },
+            ]}
+            title="My finances"
+            description="Your wallet, cards and latest transactions."
+          />
+        </div>
+
+        <MemberDashboardLoading />
+      </div>
+    );
   }
 
+  /* =======================================================
+     ERROR
+  ======================================================= */
+
+  if (loadError) {
+    return (
+      <div
+        className="
+          mx-auto
+          flex
+          min-h-[55vh]
+          w-full
+          max-w-[500px]
+          items-center
+          justify-center
+        "
+      >
+        <div className="w-full rounded-2xl border border-gray-200 bg-white p-6 text-center">
+          <div
+            className="
+              mx-auto
+              flex
+              h-11
+              w-11
+              items-center
+              justify-center
+              rounded-xl
+              bg-gray-100
+              text-gray-500
+            "
+          >
+            <RefreshCw
+              size={18}
+              strokeWidth={1.6}
+            />
+          </div>
+
+          <h2 className="mt-4 text-[13px] font-semibold text-gray-900">
+            Unable to load dashboard
+          </h2>
+
+          <p className="mt-1 text-[10px] leading-5 text-gray-400">
+            {loadError}
+          </p>
+
+          <button
+            type="button"
+            onClick={loadDashboard}
+            className="
+              mt-5
+              inline-flex
+              h-9
+              items-center
+              justify-center
+              gap-2
+              rounded-lg
+              bg-black
+              px-4
+              text-[10px]
+              font-medium
+              text-white
+            "
+          >
+            <RefreshCw
+              size={13}
+              strokeWidth={1.7}
+            />
+
+            Try again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  /* =======================================================
+     MEMBER DASHBOARD
+  ======================================================= */
+
   return (
-    <div className="mx-auto w-full max-w-[1600px]">
+    <div className="mx-auto w-full max-w-[1200px]">
       {/* ===================================================
-          PAGE HEADER
+          DESKTOP HEADER
+
+          Mobile doesn't need another large page title.
+          Wallet becomes the first visual focus.
       =================================================== */}
 
+      <div className="hidden lg:block">
+        <PageHeader
+          breadcrumbs={[
+            {
+              label: "Home",
+              href: "#",
+            },
+            {
+              label:
+                "Dashboard",
+            },
+          ]}
+          title="My finances"
+          description="Your wallet, savings cards and latest money movements."
+        />
+      </div>
+
+      {/* ===================================================
+          MOBILE INTRO
+      =================================================== */}
+
+      <div className="mb-4 lg:hidden">
+        <p className="text-[10px] font-medium text-gray-400">
+          Financial overview
+        </p>
+
+        <div className="mt-1 flex items-end justify-between gap-3">
+          <h1 className="text-[22px] font-semibold tracking-[-0.04em] text-gray-950">
+            My money
+          </h1>
+
+          <span className="text-[9px] font-medium text-gray-400">
+            {cardCountText}
+          </span>
+        </div>
+      </div>
+
+      {/* ===================================================
+          ORDER
+
+          MOBILE:
+          1. Wallet
+          2. Cards
+          3. Transactions
+
+          DESKTOP:
+          Wallet + Cards
+          Transactions below
+      =================================================== */}
+
+      <div
+        className="
+          grid
+          grid-cols-1
+          gap-5
+          lg:grid-cols-[minmax(330px,0.85fr)_minmax(0,1.4fr)]
+          lg:items-start
+        "
+      >
+        {/* 1. WALLET */}
+
+        <WalletHero
+          summary={summary}
+          onCards={() =>
+            navigate("/cards")
+          }
+          onTransactions={() =>
+            navigate(
+              "/transactions",
+            )
+          }
+        />
+
+        {/* 2. CARDS */}
+
+        <CardsSection
+          cards={cards}
+          onViewAll={() =>
+            navigate("/cards")
+          }
+        />
+      </div>
+
+      {/* 3. TRANSACTIONS */}
+
+      <div className="mt-5">
+        <TransactionsSection
+          transactions={
+            transactions
+          }
+          onViewAll={() =>
+            navigate(
+              "/transactions",
+            )
+          }
+        />
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
+   INTERNAL DASHBOARD DATA
+
+   This keeps the dashboard usable for Admin / Staff accounts.
+
+   Firebase member finance APIs are NOT called for internal users.
+========================================================= */
+
+const internalSummary = [
+  {
+    title: "Total balance",
+    value: "₱284,560.00",
+    description:
+      "Current financial position",
+    icon: Wallet,
+    primary: true,
+  },
+  {
+    title: "Income",
+    value: "₱124,800.00",
+    description: "This month",
+    icon: ArrowDownLeft,
+  },
+  {
+    title: "Expenses",
+    value: "₱68,240.00",
+    description: "This month",
+    icon: ArrowUpRight,
+  },
+  {
+    title: "Savings",
+    value: "₱56,560.00",
+    description: "Current savings",
+    icon: Landmark,
+  },
+];
+
+/* =========================================================
+   INTERNAL DASHBOARD
+========================================================= */
+
+function InternalDashboard() {
+  return (
+    <div className="mx-auto w-full max-w-[1600px]">
       <PageHeader
         breadcrumbs={[
           {
@@ -279,582 +1249,180 @@ function Dashboard({ loading = false }) {
             href: "#",
           },
           {
-            label: "Dashboard",
+            label:
+              "Dashboard",
           },
         ]}
         title="Financial dashboard"
-        description="A quick overview of your financial activity and performance."
-        actions={
-          <>
-            <button
-              type="button"
-              className="
-                flex
-                h-9
-                items-center
-                gap-2
-                rounded-lg
-                border
-                border-gray-200
-                bg-white
-                px-3
-                text-[11px]
-                font-medium
-                text-gray-700
-                transition-colors
-                hover:border-gray-300
-                hover:bg-gray-50
-              "
-            >
-              <Eye size={14} strokeWidth={1.6} />
-              View report
-            </button>
-
-            <button
-              type="button"
-              className="
-                flex
-                h-9
-                items-center
-                gap-2
-                rounded-lg
-                bg-black
-                px-3.5
-                text-[11px]
-                font-medium
-                text-white
-                transition-colors
-                hover:bg-gray-800
-              "
-            >
-              <Plus size={14} strokeWidth={1.7} />
-              Add transaction
-            </button>
-          </>
-        }
+        description="A quick overview of your financial activity."
       />
 
-      {/* ===================================================
-          SUMMARY
-      =================================================== */}
+      <section
+        className="
+          grid
+          grid-cols-1
+          gap-3
+          sm:grid-cols-2
+          xl:grid-cols-4
+        "
+      >
+        {internalSummary.map(
+          ({
+            title,
+            value,
+            description,
+            icon: Icon,
+            primary,
+          }) => (
+            <article
+              key={title}
+              className={`
+                rounded-2xl
+                border
+                p-5
 
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {summaryCards.map((card) => (
-          <SummaryCard key={card.title} {...card} />
-        ))}
+                ${
+                  primary
+                    ? "border-black bg-black text-white"
+                    : "border-gray-200 bg-white text-gray-950"
+                }
+              `}
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <p
+                    className={`
+                      text-[10px]
+                      font-medium
+
+                      ${
+                        primary
+                          ? "text-white/50"
+                          : "text-gray-400"
+                      }
+                    `}
+                  >
+                    {title}
+                  </p>
+
+                  <p className="mt-2 text-[22px] font-semibold tracking-[-0.035em]">
+                    {value}
+                  </p>
+                </div>
+
+                <div
+                  className={`
+                    flex
+                    h-9
+                    w-9
+                    items-center
+                    justify-center
+                    rounded-xl
+
+                    ${
+                      primary
+                        ? "bg-white/10 text-white"
+                        : "bg-gray-100 text-gray-600"
+                    }
+                  `}
+                >
+                  <Icon
+                    size={16}
+                    strokeWidth={1.6}
+                  />
+                </div>
+              </div>
+
+              <p
+                className={`
+                  mt-5
+                  text-[9px]
+
+                  ${
+                    primary
+                      ? "text-white/40"
+                      : "text-gray-400"
+                  }
+                `}
+              >
+                {description}
+              </p>
+            </article>
+          ),
+        )}
       </section>
 
-      {/* ===================================================
-          MAIN ROW
-      =================================================== */}
-
-      <section className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(300px,0.8fr)]">
-        {/* =================================================
-            CASH FLOW
-        ================================================= */}
-
-        <div className="rounded-xl border border-gray-200 bg-white">
-          <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
-            <div>
-              <h2 className="text-[13px] font-semibold text-gray-950">
-                Cash flow
-              </h2>
-
-              <p className="mt-0.5 text-[10px] text-gray-400">
-                Income and expenses over the last 6 months
-              </p>
-            </div>
-
-            <button
-              type="button"
+      <section
+        className="
+          mt-4
+          rounded-2xl
+          border
+          border-gray-200
+          bg-white
+          p-5
+        "
+      >
+        <div
+          className="
+            flex
+            min-h-[260px]
+            items-center
+            justify-center
+          "
+        >
+          <div className="max-w-[300px] text-center">
+            <div
               className="
+                mx-auto
                 flex
-                h-8
-                items-center
-                rounded-md
-                border
-                border-gray-200
-                px-2.5
-                text-[10px]
-                font-medium
-                text-gray-500
-                transition-colors
-                hover:bg-gray-50
-              "
-            >
-              Last 6 months
-            </button>
-          </div>
-
-          <div className="p-5">
-            {/* LEGEND */}
-            <div className="mb-6 flex items-center gap-5">
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-sm bg-black" />
-
-                <span className="text-[10px] text-gray-500">Income</span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-sm bg-gray-300" />
-
-                <span className="text-[10px] text-gray-500">Expenses</span>
-              </div>
-            </div>
-
-            {/* CHART */}
-            <div className="relative h-[240px]">
-              {/* GRID */}
-              <div className="absolute inset-0 flex flex-col justify-between">
-                {[1, 2, 3, 4, 5].map((line) => (
-                  <div
-                    key={line}
-                    className="border-t border-dashed border-gray-100"
-                  />
-                ))}
-              </div>
-
-              {/* BARS */}
-              <div className="absolute inset-0 flex items-end justify-between gap-4 px-2">
-                {cashFlow.map((item) => (
-                  <div
-                    key={item.month}
-                    className="flex h-full flex-1 flex-col justify-end"
-                  >
-                    <div className="flex flex-1 items-end justify-center gap-1.5">
-                      {/* INCOME */}
-                      <div
-                        className="
-                          w-full
-                          max-w-[22px]
-                          rounded-t-[4px]
-                          bg-black
-                          transition-colors
-                          hover:bg-gray-800
-                        "
-                        style={{
-                          height: `${item.income}%`,
-                        }}
-                      />
-
-                      {/* EXPENSE */}
-                      <div
-                        className="
-                          w-full
-                          max-w-[22px]
-                          rounded-t-[4px]
-                          bg-gray-300
-                          transition-colors
-                          hover:bg-gray-400
-                        "
-                        style={{
-                          height: `${item.expense}%`,
-                        }}
-                      />
-                    </div>
-
-                    <p className="mt-3 text-center text-[9px] font-medium text-gray-400">
-                      {item.month}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* =================================================
-            BUDGET
-        ================================================= */}
-
-        <div className="rounded-xl border border-gray-200 bg-white">
-          <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
-            <div>
-              <h2 className="text-[13px] font-semibold text-gray-950">
-                Budget overview
-              </h2>
-
-              <p className="mt-0.5 text-[10px] text-gray-400">
-                Monthly spending limits
-              </p>
-            </div>
-
-            <button
-              type="button"
-              aria-label="Budget options"
-              className="
-                flex
-                h-8
-                w-8
+                h-11
+                w-11
                 items-center
                 justify-center
-                rounded-md
-                text-gray-400
-                transition-colors
-                hover:bg-gray-100
-                hover:text-gray-900
+                rounded-xl
+                bg-gray-100
+                text-gray-500
               "
             >
-              <MoreHorizontal size={16} />
-            </button>
-          </div>
-
-          <div className="space-y-5 p-5">
-            {budgets.map((budget) => (
-              <div key={budget.label}>
-                <div className="mb-2 flex items-end justify-between">
-                  <div>
-                    <p className="text-[11px] font-medium text-gray-800">
-                      {budget.label}
-                    </p>
-
-                    <p className="mt-0.5 text-[9px] text-gray-400">
-                      {budget.spent} of {budget.total}
-                    </p>
-                  </div>
-
-                  <span className="text-[10px] font-medium text-gray-500">
-                    {budget.progress}%
-                  </span>
-                </div>
-
-                <div className="h-1.5 overflow-hidden rounded-full bg-gray-100">
-                  <div
-                    className="h-full rounded-full bg-black transition-all duration-300"
-                    style={{
-                      width: `${budget.progress}%`,
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ===================================================
-          LOWER ROW
-      =================================================== */}
-
-      <section className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(300px,0.8fr)]">
-        {/* =================================================
-            TRANSACTIONS
-        ================================================= */}
-
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-          <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
-            <div>
-              <h2 className="text-[13px] font-semibold text-gray-950">
-                Recent transactions
-              </h2>
-
-              <p className="mt-0.5 text-[10px] text-gray-400">
-                Latest account activity
-              </p>
+              <ReceiptText
+                size={18}
+                strokeWidth={1.6}
+              />
             </div>
 
-            <button
-              type="button"
-              className="
-                flex
-                items-center
-                gap-1
-                text-[10px]
-                font-medium
-                text-gray-500
-                transition-colors
-                hover:text-black
-              "
-            >
-              View all
-              <ChevronRight size={13} />
-            </button>
-          </div>
-
-          {/* ===============================================
-              DESKTOP TABLE
-          =============================================== */}
-
-          <div className="hidden md:block">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="border-b border-gray-100 text-left">
-                  <th className="px-5 py-3 text-[9px] font-semibold uppercase tracking-[0.1em] text-gray-400">
-                    Transaction
-                  </th>
-
-                  <th className="px-5 py-3 text-[9px] font-semibold uppercase tracking-[0.1em] text-gray-400">
-                    Category
-                  </th>
-
-                  <th className="px-5 py-3 text-[9px] font-semibold uppercase tracking-[0.1em] text-gray-400">
-                    Date
-                  </th>
-
-                  <th className="px-5 py-3 text-right text-[9px] font-semibold uppercase tracking-[0.1em] text-gray-400">
-                    Amount
-                  </th>
-
-                  <th className="w-10" />
-                </tr>
-              </thead>
-
-              <tbody>
-                {transactions.map((transaction) => (
-                  <tr
-                    key={transaction.id}
-                    className="
-                        border-b
-                        border-gray-100
-                        transition-colors
-                        last:border-0
-                        hover:bg-gray-50/70
-                      "
-                  >
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-gray-700">
-                          {transaction.type === "income" ? (
-                            <ArrowDownLeft size={14} strokeWidth={1.6} />
-                          ) : (
-                            <ArrowUpRight size={14} strokeWidth={1.6} />
-                          )}
-                        </div>
-
-                        <p className="text-[11px] font-medium text-gray-800">
-                          {transaction.name}
-                        </p>
-                      </div>
-                    </td>
-
-                    <td className="px-5 py-3.5 text-[10px] text-gray-500">
-                      {transaction.category}
-                    </td>
-
-                    <td className="px-5 py-3.5 text-[10px] text-gray-400">
-                      {transaction.date}
-                    </td>
-
-                    <td
-                      className={`px-5 py-3.5 text-right text-[11px] font-medium ${
-                        transaction.type === "income"
-                          ? "text-gray-950"
-                          : "text-gray-600"
-                      }`}
-                    >
-                      {transaction.amount}
-                    </td>
-
-                    <td className="pr-3">
-                      <button
-                        type="button"
-                        aria-label="Transaction options"
-                        className="
-                            flex
-                            h-7
-                            w-7
-                            items-center
-                            justify-center
-                            rounded-md
-                            text-gray-300
-                            transition-colors
-                            hover:bg-gray-100
-                            hover:text-gray-700
-                          "
-                      >
-                        <Ellipsis size={14} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* ===============================================
-              MOBILE LIST
-          =============================================== */}
-
-          <div className="divide-y divide-gray-100 md:hidden">
-            {transactions.map((transaction) => (
-              <div
-                key={transaction.id}
-                className="flex items-center justify-between gap-3 px-4 py-3.5"
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-100">
-                    {transaction.type === "income" ? (
-                      <ArrowDownLeft size={14} strokeWidth={1.6} />
-                    ) : (
-                      <ArrowUpRight size={14} strokeWidth={1.6} />
-                    )}
-                  </div>
-
-                  <div className="min-w-0">
-                    <p className="truncate text-[11px] font-medium text-gray-800">
-                      {transaction.name}
-                    </p>
-
-                    <p className="mt-0.5 text-[9px] text-gray-400">
-                      {transaction.category}
-                    </p>
-                  </div>
-                </div>
-
-                <p className="shrink-0 text-[10px] font-medium text-gray-700">
-                  {transaction.amount}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* =================================================
-            QUICK ACTIONS
-        ================================================= */}
-
-        <div className="rounded-xl border border-gray-200 bg-white">
-          <div className="border-b border-gray-100 px-5 py-4">
-            <h2 className="text-[13px] font-semibold text-gray-950">
-              Quick actions
+            <h2 className="mt-3 text-[12px] font-semibold text-gray-900">
+              Workspace overview
             </h2>
 
-            <p className="mt-0.5 text-[10px] text-gray-400">
-              Common financial tasks
+            <p className="mt-1 text-[10px] leading-5 text-gray-400">
+              Member financial information is available through individual member accounts.
             </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 p-4">
-            {/* TRANSFER */}
-            <button
-              type="button"
-              className="
-                group
-                flex
-                min-h-[100px]
-                flex-col
-                justify-between
-                rounded-lg
-                border
-                border-gray-200
-                p-3
-                text-left
-                transition-all
-                duration-200
-                hover:border-gray-300
-                hover:bg-gray-50
-              "
-            >
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-black text-white">
-                <Send size={14} strokeWidth={1.6} />
-              </div>
-
-              <div>
-                <p className="text-[11px] font-medium text-gray-900">
-                  Transfer
-                </p>
-
-                <p className="mt-0.5 text-[9px] text-gray-400">Send money</p>
-              </div>
-            </button>
-
-            {/* EXPENSE */}
-            <button
-              type="button"
-              className="
-                group
-                flex
-                min-h-[100px]
-                flex-col
-                justify-between
-                rounded-lg
-                border
-                border-gray-200
-                p-3
-                text-left
-                transition-all
-                duration-200
-                hover:border-gray-300
-                hover:bg-gray-50
-              "
-            >
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-gray-700">
-                <ReceiptText size={14} strokeWidth={1.6} />
-              </div>
-
-              <div>
-                <p className="text-[11px] font-medium text-gray-900">Expense</p>
-
-                <p className="mt-0.5 text-[9px] text-gray-400">Add expense</p>
-              </div>
-            </button>
-
-            {/* PAYMENT */}
-            <button
-              type="button"
-              className="
-                group
-                flex
-                min-h-[100px]
-                flex-col
-                justify-between
-                rounded-lg
-                border
-                border-gray-200
-                p-3
-                text-left
-                transition-all
-                duration-200
-                hover:border-gray-300
-                hover:bg-gray-50
-              "
-            >
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-gray-700">
-                <CreditCard size={14} strokeWidth={1.6} />
-              </div>
-
-              <div>
-                <p className="text-[11px] font-medium text-gray-900">Payment</p>
-
-                <p className="mt-0.5 text-[9px] text-gray-400">Pay a bill</p>
-              </div>
-            </button>
-
-            {/* ACCOUNT */}
-            <button
-              type="button"
-              className="
-                group
-                flex
-                min-h-[100px]
-                flex-col
-                justify-between
-                rounded-lg
-                border
-                border-gray-200
-                p-3
-                text-left
-                transition-all
-                duration-200
-                hover:border-gray-300
-                hover:bg-gray-50
-              "
-            >
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-gray-700">
-                <Landmark size={14} strokeWidth={1.6} />
-              </div>
-
-              <div>
-                <p className="text-[11px] font-medium text-gray-900">Account</p>
-
-                <p className="mt-0.5 text-[9px] text-gray-400">Add account</p>
-              </div>
-            </button>
           </div>
         </div>
       </section>
     </div>
   );
+}
+
+/* =========================================================
+   DASHBOARD
+========================================================= */
+
+function Dashboard({
+  loading = false,
+}) {
+  const { isMember } =
+    useAuth();
+
+  if (loading) {
+    return <DashboardSkeleton />;
+  }
+
+  if (isMember) {
+    return <MemberDashboard />;
+  }
+
+  return <InternalDashboard />;
 }
 
 export default Dashboard;

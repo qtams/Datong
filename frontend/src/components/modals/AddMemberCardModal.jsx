@@ -81,7 +81,7 @@ function getAccountProviderId(account) {
 
 function ProviderCard({ provider, selected, onSelect }) {
   const image =
-    provider.landscape_image_url || provider.portrait_image_url || "";
+    provider.portrait_image_url || provider.landscape_image_url || "";
 
   return (
     <button
@@ -119,7 +119,7 @@ function ProviderCard({ provider, selected, onSelect }) {
         className="
           relative
 
-          aspect-[1.586/1]
+          aspect-[0.64/1]
 
           overflow-hidden
 
@@ -259,7 +259,7 @@ function LiveCardPreview({ provider, name, amount }) {
   }, []);
 
   const image =
-    provider?.landscape_image_url || provider?.portrait_image_url || "";
+    provider?.portrait_image_url || provider?.landscape_image_url || "";
 
   const displayName = name.trim() || "Card name";
 
@@ -270,7 +270,7 @@ function LiveCardPreview({ provider, name, amount }) {
       className="
         mx-auto
         w-full
-        max-w-[430px]
+        max-w-[250px]
       "
     >
       {/* =================================================
@@ -337,7 +337,7 @@ function LiveCardPreview({ provider, name, amount }) {
         className="
           relative
 
-          aspect-[1.586/1]
+          aspect-[0.64/1]
 
           w-full
         "
@@ -356,7 +356,7 @@ function LiveCardPreview({ provider, name, amount }) {
               h-full
               w-full
 
-              object-contain
+              object-cover
             "
           />
         ) : (
@@ -400,11 +400,11 @@ function LiveCardPreview({ provider, name, amount }) {
 
                   maskImage: `url("${image}")`,
 
-                  WebkitMaskSize: "contain",
+                  WebkitMaskSize: "cover",
 
                   WebkitMaskPosition: "center",
 
-                  maskSize: "contain",
+                  maskSize: "cover",
 
                   maskPosition: "center",
 
@@ -427,8 +427,8 @@ function LiveCardPreview({ provider, name, amount }) {
           className="
             absolute
 
-            bottom-[15%]
-            left-[6%]
+            bottom-[7%]
+            left-[7%]
 
             z-10
 
@@ -453,13 +453,12 @@ function LiveCardPreview({ provider, name, amount }) {
               className="
                 truncate
 
-                text-[14px]
-                font-normal
-                uppercase
-                tracking-[0.12em]
+                text-[11px]
+                font-medium
+                tracking-[0.01em]
                 text-white
 
-                sm:text-[16px]
+                sm:text-[12px]
               "
             >
               {displayName}
@@ -482,11 +481,11 @@ function LiveCardPreview({ provider, name, amount }) {
               }}
               style={CARD_TEXT_STYLE}
               className="
-                mt-1.5
+                mt-1
 
-                text-[17px]
-                font-normal
-                tracking-[0.1em]
+                text-[18px]
+                font-semibold
+                tracking-[-0.02em]
                 text-white
 
                 sm:text-[20px]

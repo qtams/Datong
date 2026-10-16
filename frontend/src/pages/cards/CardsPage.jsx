@@ -1,19 +1,37 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
 import {
   ArrowLeftRight,
+  Banknote,
+  CreditCard,
+  Eye,
+  EyeOff,
+  LayoutGrid,
+  List,
   LoaderCircle,
   Plus,
   Trash2,
   WalletCards,
 } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+
+import {
+  AnimatePresence,
+  motion,
+} from "motion/react";
+
 import toast from "react-hot-toast";
 
 import AddMemberCardModal from "../../components/modals/AddMemberCardModal";
 import TransferMoneyModal from "../../components/modals/TransferMoneyModal";
 import WalletBalanceModal from "../../components/modals/WalletBalanceModal";
+import MobileFloatingAddButton from "../../components/MobileFloatingAddButton";
 
-import datongWallet from "../../assets/datong_wallet.webp";
+import ReflectiveCard from "../../components/reactbits/ReflectiveCard";
 
 import {
   createMemberCard,
@@ -26,51 +44,59 @@ import {
   updateCashBalance,
 } from "../../services/memberFinanceApi";
 
-import { confirmDelete } from "../../utils/sweetAlert";
+import {
+  confirmDelete,
+} from "../../utils/sweetAlert";
 
 /* =========================================================
    MONEY
 ========================================================= */
 
 function formatPeso(value) {
-  const amount = Number(value || 0);
+  const amount = Number(
+    value || 0,
+  );
 
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-    minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
-    maximumFractionDigits: 2,
-  }).format(Number.isFinite(amount) ? amount : 0);
+  return new Intl.NumberFormat(
+    "en-PH",
+    {
+      style: "currency",
+      currency: "PHP",
+      minimumFractionDigits:
+        Number.isInteger(amount)
+          ? 0
+          : 2,
+      maximumFractionDigits: 2,
+    },
+  ).format(
+    Number.isFinite(amount)
+      ? amount
+      : 0,
+  );
 }
 
 /* =========================================================
-   CARD FONT
+   HIDDEN MONEY
 ========================================================= */
 
-const CARD_FONT_ID = "member-card-font";
+function displayMoney(
+  value,
+  hidden,
+) {
+  if (hidden) {
+    return "₱••••••";
+  }
 
-const CARD_FONT_URL =
-  "https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap";
-
-const CARD_FONT_STYLE = {
-  fontFamily:
-    '"Share Tech Mono", "OCR A Std", "OCR-A", "Courier New", ui-monospace, monospace',
-  fontVariantNumeric: "tabular-nums",
-};
-
-const CARD_TEXT_STYLE = {
-  ...CARD_FONT_STYLE,
-  textShadow:
-    "0 1px 0 rgba(255,255,255,0.28), 0 -1px 0 rgba(0,0,0,0.55), 0 2px 4px rgba(0,0,0,0.45)",
-};
-
-const MAX_TILT = 8;
+  return formatPeso(value);
+}
 
 /* =========================================================
    PROVIDER ID
 ========================================================= */
 
-function getAccountProviderId(account) {
+function getAccountProviderId(
+  account,
+) {
   const id =
     account?.provider?.id ??
     account?.card?.id ??
@@ -78,933 +104,977 @@ function getAccountProviderId(account) {
     account?.provider_id ??
     null;
 
-  const numericId = Number(id);
+  const numericId =
+    Number(id);
 
-  return Number.isFinite(numericId) ? numericId : null;
+  return Number.isFinite(
+    numericId,
+  )
+    ? numericId
+    : null;
 }
 
 /* =========================================================
-   REFLECTIVE CARD ART
+   ACCOUNT GROUP
 ========================================================= */
 
-function ReflectiveCardArt({ image, alt, children }) {
-  const frameRef = useRef(null);
-  const tiltRef = useRef(null);
-  const rafRef = useRef(0);
+function getAccountGroup(
+  account,
+) {
+  const type = String(
+    account?.provider?.type ||
+      account?.card?.type ||
+      "",
+  ).toLowerCase();
 
-  useEffect(() => {
-    return () => {
-      cancelAnimationFrame(rafRef.current);
-    };
-  }, []);
+  if (
+    type.includes("credit")
+  ) {
+    return "credit";
+  }
 
-  const apply = useCallback((values) => {
-    const element = tiltRef.current;
+  return "cash";
+}
 
-    if (!element) {
-      return;
-    }
+/* =========================================================
+   MOBILE CARD VIEW OPTIONS
+========================================================= */
 
-    Object.entries(values).forEach(([key, value]) => {
-      element.style.setProperty(key, value);
-    });
-  }, []);
+function PortraitCardIcon({ size = 13, strokeWidth = 1.7 }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <rect
+        x="6.5"
+        y="2.5"
+        width="11"
+        height="19"
+        rx="2.5"
+        stroke="currentColor"
+        strokeWidth={strokeWidth}
+      />
+      <path
+        d="M8.8 7h6.4"
+        stroke="currentColor"
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
 
-  const handlePointerMove = (event) => {
-    const frame = frameRef.current;
+const VIEW_MODES = [
+  {
+    id: "cards",
+    label: "Landscape",
+    icon: CreditCard,
+  },
+  {
+    id: "portrait",
+    label: "Portrait",
+    icon: PortraitCardIcon,
+  },
+  {
+    id: "grid",
+    label: "Grid",
+    icon: LayoutGrid,
+  },
+  {
+    id: "stack",
+    label: "Large",
+    icon: WalletCards,
+  },
+  {
+    id: "list",
+    label: "List",
+    icon: List,
+  },
+];
 
-    if (!frame) {
-      return;
-    }
-
-    if (
-      typeof window !== "undefined" &&
-      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
-    ) {
-      return;
-    }
-
-    const rect = frame.getBoundingClientRect();
-
-    if (!rect.width || !rect.height) {
-      return;
-    }
-
-    const x = Math.min(
-      1,
-      Math.max(0, (event.clientX - rect.left) / rect.width),
-    );
-
-    const y = Math.min(
-      1,
-      Math.max(0, (event.clientY - rect.top) / rect.height),
-    );
-
-    cancelAnimationFrame(rafRef.current);
-
-    rafRef.current = requestAnimationFrame(() => {
-      apply({
-        "--mx": `${(x * 100).toFixed(2)}%`,
-        "--my": `${(y * 100).toFixed(2)}%`,
-        "--rx": `${((0.5 - y) * MAX_TILT * 2).toFixed(2)}deg`,
-        "--ry": `${((x - 0.5) * MAX_TILT * 2).toFixed(2)}deg`,
-        "--scale": "1.015",
-        "--glare": "1",
-      });
-    });
-  };
-
-  const handlePointerLeave = () => {
-    cancelAnimationFrame(rafRef.current);
-
-    apply({
-      "--rx": "0deg",
-      "--ry": "0deg",
-      "--scale": "1",
-      "--glare": "0",
-    });
-  };
-
-  const maskStyle = image
-    ? {
-        WebkitMaskImage: `url("${image}")`,
-        maskImage: `url("${image}")`,
-        WebkitMaskSize: "cover",
-        maskSize: "cover",
-        WebkitMaskRepeat: "no-repeat",
-        maskRepeat: "no-repeat",
-        WebkitMaskPosition: "center",
-        maskPosition: "center",
-      }
-    : {};
-
+function ViewSwitcher({ value, onChange }) {
   return (
     <div
-      ref={frameRef}
-      onPointerMove={handlePointerMove}
-      onPointerLeave={handlePointerLeave}
-      onPointerCancel={handlePointerLeave}
       className="
-        absolute
-        inset-0
-        select-none
-        bg-transparent
+        inline-flex
+        items-center
+        gap-0.5
+        rounded-full
+        bg-gray-200/80
+        p-1
+        sm:hidden
       "
-      style={{
-        perspective: "1000px",
-      }}
     >
-      <div
-        ref={tiltRef}
-        className="
-          relative
-          h-full
-          w-full
-          overflow-hidden
-          rounded-[18px]
-          bg-transparent
-          will-change-transform
-        "
-        style={{
-          "--mx": "50%",
-          "--my": "50%",
-          "--rx": "0deg",
-          "--ry": "0deg",
-          "--scale": "1",
-          "--glare": "0",
-          transform:
-            "rotateX(var(--rx)) rotateY(var(--ry)) scale(var(--scale))",
-          transformStyle: "preserve-3d",
-          transition: "transform 180ms ease-out",
-        }}
-      >
-        {image ? (
-          <img
-            src={image}
-            alt={alt}
-            draggable={false}
-            className="
-              absolute
-              inset-0
-              h-full
-              w-full
-              select-none
-              rounded-[18px]
-              object-cover
-            "
-          />
-        ) : (
-          <div
-            className="
-              absolute
-              inset-0
+      {VIEW_MODES.map(({ id, label, icon: Icon }) => {
+        const active = value === id;
+
+        return (
+          <button
+            key={id}
+            type="button"
+            title={label}
+            aria-label={label}
+            aria-pressed={active}
+            onClick={() => onChange(id)}
+            className={`
               flex
+              h-7
+              w-7
               items-center
               justify-center
-              rounded-[18px]
-              bg-black
-              text-white
-            "
+              rounded-full
+              transition-all
+              ${
+                active
+                  ? "bg-white text-gray-950 shadow-sm"
+                  : "text-gray-400 hover:text-gray-700"
+              }
+            `}
           >
-            <WalletCards size={28} strokeWidth={1.4} />
-          </div>
-        )}
-
-        <div
-          aria-hidden="true"
-          className="
-            pointer-events-none
-            absolute
-            inset-0
-            rounded-[18px]
-          "
-          style={{
-            background:
-              "linear-gradient(145deg, rgba(255,255,255,0.14), transparent 38%, rgba(0,0,0,0.02))",
-            mixBlendMode: "soft-light",
-          }}
-        />
-
-        <div
-          aria-hidden="true"
-          className="
-            pointer-events-none
-            absolute
-            inset-0
-          "
-          style={{
-            ...maskStyle,
-            backgroundImage:
-              "linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.2) 28%, rgba(0,0,0,0) 55%)",
-          }}
-        />
-
-        <div
-          aria-hidden="true"
-          className="
-            pointer-events-none
-            absolute
-            inset-0
-          "
-          style={{
-            ...maskStyle,
-            opacity: "var(--glare)",
-            transition: "opacity 200ms ease-out",
-            background:
-              "radial-gradient(circle at var(--mx) var(--my), rgba(255,255,255,0.52) 0%, rgba(255,255,255,0.14) 26%, transparent 58%)",
-            mixBlendMode: "soft-light",
-          }}
-        />
-
-        <div
-          aria-hidden="true"
-          className="
-            pointer-events-none
-            absolute
-            inset-0
-          "
-          style={{
-            ...maskStyle,
-            opacity: "calc(var(--glare) * 0.75)",
-            transition: "opacity 200ms ease-out",
-            background:
-              "linear-gradient(115deg, transparent calc(var(--mx) - 24%), rgba(255,255,255,0.30) var(--mx), transparent calc(var(--mx) + 24%))",
-            mixBlendMode: "overlay",
-          }}
-        />
-
-        {children}
-      </div>
+            <Icon size={13} strokeWidth={active ? 2 : 1.6} />
+          </button>
+        );
+      })}
     </div>
   );
 }
 
 /* =========================================================
-   SAVINGS CARD
+   NET WORTH
 ========================================================= */
 
-function SavingsCard({
-  account,
-  removing = false,
-  onTransfer,
-  onRemove,
+function NetWorthSummary({
+  summary,
+  cardCount,
+  hidden,
+  onToggleHidden,
 }) {
-  const provider = account?.provider || {};
-
-  const image =
-    provider.landscape_image_url ||
-    provider.portrait_image_url ||
-    "";
-
-  const name =
-    account?.name ||
-    provider?.name ||
-    "Savings";
-
-  const balance =
-    account?.balance ||
-    "0.00";
-
   return (
-    <motion.div
-      layout
-      initial={{
-        opacity: 0,
-        y: 10,
-        scale: 0.98,
-      }}
-      animate={{
-        opacity: removing ? 0.55 : 1,
-        y: 0,
-        scale: 1,
-      }}
-      exit={{
-        opacity: 0,
-        scale: 0.96,
-      }}
-      transition={{
-        duration: 0.18,
-        ease: "easeOut",
-      }}
+    <section
       className="
-        group
-        relative
-        block
-        w-full
-        rounded-[18px]
-      "
-      style={{
-        aspectRatio: "1.586 / 1",
-      }}
-    >
-      <motion.button
-        type="button"
-        disabled={removing}
-        onClick={() => onTransfer?.(account)}
-        aria-label={`${name}, balance ${formatPeso(
-          balance,
-        )}. Transfer money`}
-        whileTap={{
-          scale: 0.98,
-        }}
-        className="
-          absolute
-          inset-0
-          rounded-[18px]
-          bg-transparent
-          text-left
-          outline-none
-          focus-visible:ring-2
-          focus-visible:ring-black
-          focus-visible:ring-offset-2
-        "
-      >
-        <ReflectiveCardArt
-          image={image}
-          alt={provider?.name || name}
-        >
-          <div
-            className="
-              pointer-events-none
-              absolute
-              bottom-[10%]
-              left-[7%]
-              right-[7%]
-              z-10
-            "
-          >
-            <p
-              style={CARD_TEXT_STYLE}
-              className="
-                truncate
-                text-[11px]
-                font-normal
-                uppercase
-                tracking-[0.12em]
-                text-white
-                sm:text-[13px]
-                2xl:text-[15px]
-              "
-            >
-              {name}
-            </p>
+        mb-7
 
-            <p
-              style={CARD_TEXT_STYLE}
-              className="
-                mt-0.5
-                truncate
-                text-[13px]
-                font-normal
-                tracking-[0.1em]
-                text-white
-                sm:text-[15px]
-                2xl:text-[17px]
-              "
-            >
-              {formatPeso(balance)}
-            </p>
-          </div>
-        </ReflectiveCardArt>
-      </motion.button>
+        rounded-[24px]
+
+        border
+        border-gray-100
+
+        bg-white
+
+        p-5
+
+        shadow-[0_12px_40px_rgba(15,23,42,0.07)]
+
+        sm:p-6
+        lg:p-7
+      "
+    >
+      {/* HEADER */}
 
       <div
         className="
-          absolute
-          bottom-2.5
-          right-2.5
-          z-20
           flex
           items-center
-          gap-1.5
+          justify-between
         "
       >
-        <span
-          aria-hidden="true"
+        <p
           className="
-            pointer-events-none
-            hidden
-            h-8
-            w-8
-            items-center
-            justify-center
-            rounded-full
-            bg-black/50
-            text-white
-            opacity-0
-            backdrop-blur-md
-            transition-opacity
-            group-hover:opacity-100
-            sm:flex
+            text-[10px]
+            font-semibold
+            uppercase
+            tracking-[0.18em]
+
+            text-gray-400
           "
         >
-          <ArrowLeftRight
-            size={12}
-            strokeWidth={1.7}
-          />
-        </span>
+          Net worth
+        </p>
 
         <button
           type="button"
-          disabled={removing}
-          onClick={(event) => {
-            event.stopPropagation();
-            onRemove?.(account);
-          }}
-          aria-label={`Remove ${name}`}
-          title={`Remove ${name}`}
+          onClick={
+            onToggleHidden
+          }
+          aria-label={
+            hidden
+              ? "Show balances"
+              : "Hide balances"
+          }
           className="
             flex
             h-8
             w-8
             items-center
             justify-center
+
             rounded-full
-            bg-black/50
-            text-white
-            outline-none
-            backdrop-blur-md
-            transition-all
-            hover:bg-red-600
-            focus-visible:opacity-100
-            focus-visible:ring-2
-            focus-visible:ring-white
-            active:scale-90
-            disabled:cursor-not-allowed
-            sm:opacity-0
-            sm:group-hover:opacity-100
+
+            bg-gray-100
+
+            text-gray-400
+
+            transition-colors
+
+            hover:bg-gray-200
+            hover:text-gray-700
           "
         >
-          {removing ? (
-            <LoaderCircle
-              size={12}
-              className="animate-spin"
+          {hidden ? (
+            <EyeOff
+              size={15}
+              strokeWidth={1.6}
             />
           ) : (
-            <Trash2
-              size={12}
-              strokeWidth={1.8}
+            <Eye
+              size={15}
+              strokeWidth={1.6}
             />
           )}
         </button>
       </div>
-    </motion.div>
-  );
-}
 
-/* =========================================================
-   DATONG WALLET
-========================================================= */
+      {/* TOTAL */}
 
-function DatongWalletSummary({
-  balance = 0,
-  className = "w-[185px] sm:w-[250px] lg:w-[300px]",
-  onEdit,
-  onTransfer,
-}) {
-  const maskStyle = {
-    WebkitMaskImage: `url("${datongWallet}")`,
-    maskImage: `url("${datongWallet}")`,
-    WebkitMaskSize: "contain",
-    maskSize: "contain",
-    WebkitMaskRepeat: "no-repeat",
-    maskRepeat: "no-repeat",
-    WebkitMaskPosition: "center",
-    maskPosition: "center",
-  };
-
-  return (
-    <motion.div
-      initial={{
-        opacity: 0,
-        x: -8,
-        y: 4,
-      }}
-      animate={{
-        opacity: 1,
-        x: 0,
-        y: 0,
-      }}
-      transition={{
-        duration: 0.22,
-      }}
-      className={`
-        group/wallet
-        relative
-        aspect-[1.586/1]
-        bg-transparent
-        ${className}
-      `}
-    >
-      <img
-        src={datongWallet}
-        alt="Datong Wallet"
-        draggable={false}
-        className="
-          absolute
-          inset-0
-          z-[1]
-          h-full
-          w-full
-          select-none
-          bg-transparent
-          object-contain
-        "
-      />
-
-      <div
-        aria-hidden="true"
-        className="
-          pointer-events-none
-          absolute
-          inset-0
-          z-[2]
-        "
-        style={{
-          ...maskStyle,
-          backgroundImage:
-            "linear-gradient(to top, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.15) 30%, rgba(0,0,0,0) 48%)",
+      <motion.p
+        key={`${summary?.total_money}-${hidden}`}
+        initial={{
+          opacity: 0,
+          y: 4,
         }}
-      />
-
-      {/* BALANCE */}
-
-      <div
-        className="
-          pointer-events-none
-          absolute
-          bottom-[10%]
-          left-[14%]
-          z-[3]
-        "
-      >
-        <p
-          style={CARD_FONT_STYLE}
-          className="
-            text-[7px]
-            font-normal
-            uppercase
-            tracking-[0.16em]
-            text-white/70
-            sm:text-[10px]
-            lg:text-[11px]
-          "
-        >
-          Datong Wallet
-        </p>
-
-        <p
-          style={CARD_TEXT_STYLE}
-          className="
-            mt-0.5
-            text-[17px]
-            font-normal
-            tracking-[0.08em]
-            text-white
-            sm:text-[23px]
-            lg:text-[27px]
-          "
-        >
-          {formatPeso(balance)}
-        </p>
-      </div>
-
-      {/* ACTIONS */}
-
-      <div
-        className="
-          absolute
-          right-[8%]
-          top-[10%]
-          z-20
-          flex
-          items-center
-          gap-1.5
-        "
-      >
-        {onEdit && (
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              onEdit();
-            }}
-            aria-label="Set wallet balance"
-            title="Set wallet balance"
-            className="
-              flex
-              h-8
-              w-8
-              items-center
-              justify-center
-              rounded-full
-              bg-black/50
-              text-white
-              outline-none
-              backdrop-blur-md
-              transition-all
-              hover:bg-black/75
-              active:scale-90
-              focus-visible:ring-2
-              focus-visible:ring-white
-            "
-          >
-            <Plus
-              size={14}
-              strokeWidth={1.9}
-            />
-          </button>
-        )}
-
-        {onTransfer && (
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              onTransfer();
-            }}
-            aria-label="Transfer wallet money"
-            title="Transfer to savings"
-            className="
-              flex
-              h-8
-              w-8
-              items-center
-              justify-center
-              rounded-full
-              bg-black/50
-              text-white
-              outline-none
-              backdrop-blur-md
-              transition-all
-              hover:bg-black/75
-              active:scale-90
-              focus-visible:ring-2
-              focus-visible:ring-white
-            "
-          >
-            <ArrowLeftRight
-              size={13}
-              strokeWidth={1.8}
-            />
-          </button>
-        )}
-      </div>
-    </motion.div>
-  );
-}
-
-/* =========================================================
-   SAVINGS SUMMARY
-========================================================= */
-
-function SavingsSummary({
-  balance = 0,
-}) {
-  return (
-    <motion.div
-      key={balance}
-      initial={{
-        opacity: 0,
-        y: 6,
-      }}
-      animate={{
-        opacity: 1,
-        y: 0,
-      }}
-      transition={{
-        duration: 0.2,
-      }}
-      className="
-        mx-auto
-        flex
-        min-h-[120px]
-        w-full
-        max-w-[520px]
-        flex-col
-        items-center
-        justify-center
-        rounded-[26px]
-        bg-black
-        px-5
-        py-5
-        text-center
-        sm:min-h-[150px]
-        sm:px-7
-        sm:py-6
-      "
-    >
-      <p
-        style={CARD_FONT_STYLE}
-        className="
-          text-[11px]
-          font-normal
-          uppercase
-          tracking-[0.22em]
-          text-white/60
-          sm:text-[14px]
-        "
-      >
-        Savings
-      </p>
-
-      <p
-        style={CARD_FONT_STYLE}
-        className="
-          mt-2
-          text-[29px]
-          font-normal
-          tracking-[0.04em]
-          text-white
-          sm:text-[40px]
-        "
-      >
-        {formatPeso(balance)}
-      </p>
-    </motion.div>
-  );
-}
-
-/* =========================================================
-   MOBILE BALANCE FLIP
-========================================================= */
-
-function BalanceFlipCard({
-  savings = 0,
-  wallet = 0,
-  onWalletEdit,
-  onWalletTransfer,
-}) {
-  const [
-    showWallet,
-    setShowWallet,
-  ] = useState(false);
-
-  const hiddenFace = {
-    backfaceVisibility:
-      "hidden",
-
-    WebkitBackfaceVisibility:
-      "hidden",
-  };
-
-  return (
-    <div
-      className="
-        relative
-        mx-auto
-        aspect-[1.586/1]
-        w-full
-        max-w-[360px]
-        rounded-[26px]
-        bg-transparent
-        [-webkit-tap-highlight-color:transparent]
-      "
-      style={{
-        perspective:
-          "1200px",
-      }}
-    >
-      <motion.div
-        initial={false}
         animate={{
-          rotateY:
-            showWallet
-              ? 180
-              : 0,
-        }}
-        transition={{
-          duration: 0.5,
-          ease: [
-            0.4,
-            0,
-            0.2,
-            1,
-          ],
+          opacity: 1,
+          y: 0,
         }}
         className="
-          absolute
-          inset-0
+          mt-5
+
+          text-[34px]
+          font-semibold
+          leading-none
+          tracking-[-0.045em]
+
+          text-gray-950
+
+          sm:text-[40px]
+          lg:text-[44px]
         "
-        style={{
-          transformStyle:
-            "preserve-3d",
-        }}
       >
-        {/* =================================================
-            SAVINGS
+        {displayMoney(
+          summary?.total_money,
+          hidden,
+        )}
+      </motion.p>
 
-            Tap the whole Savings card to show the wallet.
-            No separate flip icon.
-        ================================================= */}
+      <p
+        className="
+          mt-3
 
-        <button
-          type="button"
-          onClick={() =>
-            setShowWallet(
-              true,
-            )
-          }
-          aria-label="Savings. Tap to show Datong Wallet"
-          className="
-            absolute
-            inset-0
-            flex
-            flex-col
-            items-center
-            justify-center
-            rounded-[26px]
-            bg-black
-            px-5
-            text-center
-            outline-none
-            transition-transform
-            active:scale-[0.99]
-          "
-          style={{
-            ...hiddenFace,
-            pointerEvents:
-              showWallet
-                ? "none"
-                : "auto",
-          }}
-        >
+          text-[10px]
+
+          text-gray-400
+        "
+      >
+        Wallet and savings combined
+      </p>
+
+      {/* BREAKDOWN */}
+
+      <div
+        className="
+          mt-7
+
+          grid
+          grid-cols-3
+          gap-3
+
+          border-t
+          border-gray-100
+
+          pt-5
+
+          sm:gap-6
+        "
+      >
+        {/* CASH */}
+
+        <div>
           <p
-            style={CARD_FONT_STYLE}
             className="
-              text-[11px]
-              font-normal
-              uppercase
-              tracking-[0.22em]
-              text-white/60
+              text-[9px]
+              font-medium
+              text-gray-400
+            "
+          >
+            Cash
+          </p>
+
+          <p
+            className="
+              mt-1
+
+              truncate
+
+              text-[12px]
+              font-semibold
+
+              text-gray-900
+
+              sm:text-[14px]
+            "
+          >
+            {displayMoney(
+              summary?.actual_money,
+              hidden,
+            )}
+          </p>
+        </div>
+
+        {/* SAVINGS */}
+
+        <div>
+          <p
+            className="
+              text-[9px]
+              font-medium
+              text-gray-400
             "
           >
             Savings
           </p>
 
           <p
-            style={CARD_FONT_STYLE}
             className="
-              mt-2
-              text-[34px]
-              font-normal
-              tracking-[0.04em]
-              text-white
+              mt-1
+
+              truncate
+
+              text-[12px]
+              font-semibold
+
+              text-gray-900
+
+              sm:text-[14px]
             "
           >
-            {formatPeso(
-              savings,
+            {displayMoney(
+              summary?.savings,
+              hidden,
             )}
+          </p>
+        </div>
+
+        {/* ACCOUNTS */}
+
+        <div>
+          <p
+            className="
+              text-[9px]
+              font-medium
+              text-gray-400
+            "
+          >
+            Accounts
           </p>
 
           <p
             className="
-              mt-3
-              text-[8px]
-              uppercase
-              tracking-[0.18em]
-              text-white/35
+              mt-1
+
+              text-[12px]
+              font-semibold
+
+              text-gray-900
+
+              sm:text-[14px]
             "
           >
-            Tap to view wallet
+            {cardCount}
           </p>
-        </button>
-
-        {/* =================================================
-            WALLET
-
-            Tap the wallet background to return to Savings.
-
-            The edit and transfer buttons already stop event
-            propagation, so using them will not flip the card.
-        ================================================= */}
-
-        <div
-          onClick={() =>
-            setShowWallet(
-              false,
-            )
-          }
-          className="
-            absolute
-            inset-0
-            cursor-pointer
-            [-webkit-tap-highlight-color:transparent]
-          "
-          style={{
-            ...hiddenFace,
-            transform:
-              "rotateY(180deg)",
-            pointerEvents:
-              showWallet
-                ? "auto"
-                : "none",
-          }}
-        >
-          <DatongWalletSummary
-            balance={wallet}
-            className="
-              h-full
-              w-full
-            "
-            onEdit={
-              onWalletEdit
-            }
-            onTransfer={
-              onWalletTransfer
-            }
-          />
         </div>
-      </motion.div>
-    </div>
+      </div>
+    </section>
   );
 }
 
 /* =========================================================
-   ADD CARD SLOT
+   CARD SIZE
+
+   Desktop always stays landscape.
+========================================================= */
+
+function getCardClassName(viewMode) {
+  if (viewMode === "portrait") {
+    return `
+      w-[54vw]
+      max-w-[205px]
+      shrink-0
+      snap-start
+
+      sm:w-full
+      sm:max-w-none
+      sm:shrink
+      sm:snap-none
+    `;
+  }
+
+  if (viewMode === "cards") {
+    return `
+      w-[78vw]
+      max-w-[310px]
+      shrink-0
+      snap-start
+
+      sm:w-full
+      sm:max-w-none
+      sm:shrink
+      sm:snap-none
+    `;
+  }
+
+  if (viewMode === "stack") {
+    return `
+      w-full
+      max-w-[470px]
+      sm:max-w-none
+    `;
+  }
+
+  return `
+    w-full
+    min-w-0
+  `;
+}
+
+/* =========================================================
+   REFLECTIVE CARD IMAGE
+
+   IMPORTANT:
+   - no outer background
+   - no border
+   - no drop shadow
+   - keeps the ReactBits reflection / glare
+========================================================= */
+
+function ReflectiveBankImage({ image, alt }) {
+  return (
+    <ReflectiveCard
+      width="100%"
+      height="100%"
+      radius={18}
+      theme="dark"
+      tint="#ffffff"
+      metalness={0.95}
+      roughness={0.2}
+      blurStrength={5}
+      grayscale={0}
+      warp={0.4}
+      warpScale={1}
+      shine={1}
+      bevel={0}
+      glare={0.5}
+      enableTilt
+      tiltStrength={7}
+      intro={false}
+      className="
+        h-full
+        w-full
+        !max-w-none
+        bg-transparent
+        [&>div]:!bg-transparent
+        [&>div>div:last-child]:!hidden
+      "
+      style={{
+        "--rc-pad": "0px",
+        "--rc-shadow": "none",
+        boxShadow: "none",
+        background: "transparent",
+      }}
+    >
+      <div className="relative h-full w-full overflow-hidden rounded-[18px] bg-transparent">
+        {image ? (
+          <img
+            src={image}
+            alt={alt}
+            draggable={false}
+            className="absolute inset-0 h-full w-full select-none object-cover"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center rounded-[18px] bg-[#151515] text-white/60">
+            <CreditCard size={26} strokeWidth={1.4} />
+          </div>
+        )}
+      </div>
+    </ReflectiveCard>
+  );
+}
+
+/* =========================================================
+   SAVINGS CARD
+
+   Landscape option -> landscape_image_url
+   Portrait option  -> portrait_image_url
+   Desktop          -> landscape_image_url
+========================================================= */
+
+function SavingsCard({
+  account,
+  hidden,
+  viewMode,
+  removing = false,
+  onTransfer,
+  onRemove,
+}) {
+  const provider = account?.provider || {};
+
+  const landscapeImage =
+    provider?.landscape_image_url || provider?.portrait_image_url || "";
+
+  const portraitImage =
+    provider?.portrait_image_url || provider?.landscape_image_url || "";
+
+  const portraitMode = viewMode === "portrait";
+
+  const mobileImage = portraitMode ? portraitImage : landscapeImage;
+
+  const name = account?.name || provider?.name || "Savings";
+  const amount = account?.balance || "0.00";
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 8, scale: 0.98 }}
+      animate={{
+        opacity: removing ? 0.45 : 1,
+        y: 0,
+        scale: 1,
+      }}
+      exit={{ opacity: 0, scale: 0.96 }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
+      className={`
+        group
+        relative
+        bg-transparent
+        ${portraitMode ? "aspect-[0.64/1]" : "aspect-[1.586/1]"}
+        sm:aspect-[1.586/1]
+        ${getCardClassName(viewMode)}
+      `}
+    >
+      {/* MOBILE IMAGE */}
+      <div className="absolute inset-0 overflow-hidden rounded-[18px] bg-transparent sm:hidden">
+        <ReflectiveBankImage
+          image={mobileImage}
+          alt={`${name} ${portraitMode ? "portrait" : "landscape"}`}
+        />
+      </div>
+
+      {/* DESKTOP ALWAYS LANDSCAPE */}
+      <div className="absolute inset-0 hidden overflow-hidden rounded-[18px] bg-transparent sm:block">
+        <ReflectiveBankImage
+          image={landscapeImage}
+          alt={`${name} landscape`}
+        />
+      </div>
+
+      {/* NAME + MONEY ONLY. NO GRADIENT / NO BACKGROUND. */}
+      <div
+        className="
+          pointer-events-none
+          absolute
+          bottom-[7%]
+          left-[7%]
+          z-20
+          max-w-[78%]
+        "
+      >
+        <p
+          className="
+            truncate
+            text-[9px]
+            font-medium
+            text-white
+            [text-shadow:0_1px_4px_rgba(0,0,0,0.95)]
+          "
+        >
+          {name}
+        </p>
+
+        <p
+          className="
+            mt-0.5
+            truncate
+            text-[13px]
+            font-bold
+            tracking-[-0.02em]
+            text-white
+            [text-shadow:0_1px_5px_rgba(0,0,0,1)]
+          "
+        >
+          {displayMoney(amount, hidden)}
+        </p>
+      </div>
+
+      <button
+        type="button"
+        disabled={removing}
+        onClick={() => onTransfer?.(account)}
+        aria-label={`Transfer from ${name}`}
+        className="absolute inset-0 z-20 rounded-[18px] bg-transparent outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+      />
+
+      <button
+        type="button"
+        disabled={removing}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          onRemove?.(account);
+        }}
+        aria-label={`Remove ${name}`}
+        title={`Remove ${name}`}
+        className="
+          absolute
+          right-2
+          top-2
+          z-30
+          flex
+          h-7
+          w-7
+          items-center
+          justify-center
+          rounded-full
+          bg-black/40
+          text-white
+          backdrop-blur-md
+          transition-all
+          hover:bg-red-600
+          disabled:cursor-not-allowed
+          sm:opacity-0
+          sm:group-hover:opacity-100
+        "
+      >
+        {removing ? (
+          <LoaderCircle size={11} className="animate-spin" />
+        ) : (
+          <Trash2 size={11} strokeWidth={1.8} />
+        )}
+      </button>
+    </motion.div>
+  );
+}
+
+/* =========================================================
+   CASH CARD
+
+   MOBILE + DESKTOP
+
+   Previously this was mobile-only.
+
+   Now it appears in the desktop account grid too.
+========================================================= */
+
+function CashCard({
+  balance,
+  hidden,
+  viewMode,
+  onEdit,
+  onTransfer,
+}) {
+  return (
+    <motion.div
+      layout
+      initial={{
+        opacity: 0,
+        y: 8,
+        scale: 0.98,
+      }}
+      animate={{
+        opacity: 1,
+        y: 0,
+        scale: 1,
+      }}
+      transition={{
+        duration: 0.18,
+        ease: "easeOut",
+      }}
+      className={`
+        group
+        relative
+
+        ${viewMode === "portrait" ? "aspect-[0.64/1]" : "aspect-[1.586/1]"}
+        sm:aspect-[1.586/1]
+
+        overflow-hidden
+
+        rounded-[18px]
+
+        bg-[#111111]
+
+        text-white
+
+        shadow-[0_8px_24px_rgba(15,23,42,0.12)]
+
+        ${getCardClassName(
+          viewMode,
+        )}
+      `}
+    >
+      {/* SURFACE */}
+
+      <div
+        aria-hidden="true"
+        className="
+          pointer-events-none
+
+          absolute
+          inset-0
+
+          bg-gradient-to-br
+
+          from-white/[0.08]
+          via-transparent
+          to-black/20
+        "
+      />
+
+      {/* SUBTLE LIGHT */}
+
+      <div
+        aria-hidden="true"
+        className="
+          pointer-events-none
+
+          absolute
+
+          -right-[20%]
+          -top-[40%]
+
+          h-[150%]
+          w-[65%]
+
+          rotate-[25deg]
+
+          bg-gradient-to-r
+
+          from-transparent
+          via-white/[0.025]
+          to-transparent
+
+          blur-2xl
+        "
+      />
+
+      {/* CLICK */}
+
+      <button
+        type="button"
+        onClick={onTransfer}
+        aria-label="Transfer cash"
+        className="
+          absolute
+          inset-0
+
+          z-10
+
+          w-full
+
+          text-left
+
+          outline-none
+
+          focus-visible:ring-2
+          focus-visible:ring-white
+          focus-visible:ring-inset
+        "
+      >
+        {/* WALLET ICON */}
+
+        <div
+          className="
+            absolute
+
+            left-[7%]
+            top-[14%]
+
+            flex
+            h-9
+            w-11
+            items-center
+            justify-center
+
+            rounded-lg
+
+            border
+            border-white/10
+
+            bg-white/[0.08]
+          "
+        >
+          <Banknote
+            size={16}
+            strokeWidth={1.5}
+          />
+        </div>
+
+        {/* NAME + AMOUNT */}
+
+        <div
+          className="
+            absolute
+
+            bottom-[11%]
+            left-[7%]
+
+            max-w-[70%]
+          "
+        >
+          <p
+            className="
+              text-[8px]
+              font-medium
+
+              text-white/75
+
+              sm:text-[9px]
+            "
+          >
+            Cash
+          </p>
+
+          <p
+            className="
+              mt-0.5
+
+              truncate
+
+              text-[12px]
+              font-bold
+              tracking-[-0.02em]
+
+              text-white
+
+              sm:text-[13px]
+            "
+          >
+            {displayMoney(
+              balance,
+              hidden,
+            )}
+          </p>
+        </div>
+      </button>
+
+      {/* ACTIONS */}
+
+      <div
+        className="
+          absolute
+
+          bottom-2.5
+          right-2.5
+
+          z-20
+
+          flex
+          gap-1
+
+          sm:opacity-0
+
+          sm:transition-opacity
+
+          sm:group-hover:opacity-100
+        "
+      >
+        {/* EDIT */}
+
+        <button
+          type="button"
+          onClick={(
+            event,
+          ) => {
+            event.stopPropagation();
+
+            onEdit();
+          }}
+          aria-label="Edit cash balance"
+          title="Edit cash balance"
+          className="
+            flex
+            h-7
+            w-7
+            items-center
+            justify-center
+
+            rounded-full
+
+            bg-black/45
+
+            text-white
+
+            backdrop-blur-md
+
+            transition-colors
+
+            hover:bg-black/75
+          "
+        >
+          <Plus
+            size={12}
+          />
+        </button>
+
+        {/* TRANSFER */}
+
+        <button
+          type="button"
+          onClick={(
+            event,
+          ) => {
+            event.stopPropagation();
+
+            onTransfer();
+          }}
+          aria-label="Transfer cash"
+          title="Transfer cash"
+          className="
+            flex
+            h-7
+            w-7
+            items-center
+            justify-center
+
+            rounded-full
+
+            bg-black/45
+
+            text-white
+
+            backdrop-blur-md
+
+            transition-colors
+
+            hover:bg-black/75
+          "
+        >
+          <ArrowLeftRight
+            size={11}
+          />
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
+/* =========================================================
+   ADD CARD
 ========================================================= */
 
 function AddCardSlot({
+  viewMode,
   onClick,
 }) {
   return (
@@ -1014,41 +1084,54 @@ function AddCardSlot({
       whileTap={{
         scale: 0.98,
       }}
-      className="
-        flex
-        w-full
+      className={`
+        hidden
         items-center
+        sm:flex
         justify-center
+
         rounded-[18px]
+
         border
         border-dashed
         border-gray-300
-        bg-gray-100/40
+
+        bg-transparent
+
         text-gray-400
-        outline-none
+
         transition-all
+
         hover:border-gray-400
-        hover:bg-gray-100
+        hover:bg-white/60
         hover:text-gray-700
-        focus-visible:ring-2
-        focus-visible:ring-black
-        focus-visible:ring-offset-2
-      "
+
+        ${getCardClassName(
+          viewMode,
+        )}
+      `}
       style={{
         aspectRatio:
           "1.586 / 1",
       }}
     >
-      <div className="text-center">
+      <div
+        className="
+          text-center
+        "
+      >
         <div
           className="
             mx-auto
+
             flex
             h-9
             w-9
             items-center
             justify-center
+
             rounded-full
+
             border
             border-current
           "
@@ -1062,7 +1145,8 @@ function AddCardSlot({
         <p
           className="
             mt-2
-            text-[8px]
+
+            text-[9px]
             font-medium
           "
         >
@@ -1074,44 +1158,74 @@ function AddCardSlot({
 }
 
 /* =========================================================
-   EMPTY CARD
+   ACCOUNT LAYOUT
+
+   MOBILE:
+   Landscape = horizontal landscape cards
+   Portrait = horizontal portrait cards
+   Grid = two columns
+   Large = one column
+   List = one column
+
+   DESKTOP:
+   Always responsive grid.
 ========================================================= */
 
-function EmptyCardSlot() {
-  return (
-    <div
-      aria-hidden="true"
-      className="
-        w-full
-        rounded-[18px]
-        bg-gray-200/70
-      "
-      style={{
-        aspectRatio:
-          "1.586 / 1",
-      }}
-    />
-  );
-}
+function AccountLayout({ mode, children }) {
+  if (mode === "cards" || mode === "portrait") {
+    return (
+      <div
+        className="
+          -mx-4
+          flex
+          snap-x
+          snap-mandatory
+          gap-3
+          overflow-x-auto
+          overflow-y-visible
+          px-4
+          pb-2
+          touch-auto
+          [scrollbar-width:none]
+          [&::-webkit-scrollbar]:hidden
 
-/* =========================================================
-   LOADING CARD
-========================================================= */
+          sm:mx-0
+          sm:grid
+          sm:grid-cols-3
+          sm:gap-4
+          sm:overflow-visible
+          sm:px-0
+          sm:pb-0
 
-function LoadingCard() {
+          lg:grid-cols-4
+          lg:gap-5
+        "
+      >
+        {children}
+      </div>
+    );
+  }
+
+  if (mode === "grid") {
+    return (
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 lg:gap-5">
+        {children}
+      </div>
+    );
+  }
+
+  if (mode === "stack") {
+    return (
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 lg:gap-5">
+        {children}
+      </div>
+    );
+  }
+
   return (
-    <div
-      className="
-        w-full
-        animate-pulse
-        rounded-[18px]
-        bg-gray-200
-      "
-      style={{
-        aspectRatio:
-          "1.586 / 1",
-      }}
-    />
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 lg:gap-5">
+      {children}
+    </div>
   );
 }
 
@@ -1124,115 +1238,190 @@ function CardsSkeleton() {
     <div
       className="
         mx-auto
+
         min-h-[calc(100vh-120px)]
+
         w-full
         max-w-[1180px]
-        px-1
-        pb-28
-        pt-8
-        sm:px-4
-        sm:pb-10
-        sm:pt-12
+
+        pb-32
+        pt-2
+
+        sm:pb-12
+        sm:pt-5
       "
     >
-      <div
-        className="
-          mx-auto
-          mb-8
-          aspect-[1.586/1]
-          w-full
-          max-w-[360px]
-          animate-pulse
-          rounded-[26px]
-          bg-black
-          sm:hidden
-        "
-      />
+      {/* NET WORTH */}
 
       <div
         className="
-          relative
-          hidden
-          min-h-[255px]
-          sm:block
-          lg:min-h-[220px]
+          mb-7
+
+          rounded-[24px]
+
+          border
+          border-gray-100
+
+          bg-white
+
+          p-5
+
+          shadow-[0_12px_40px_rgba(15,23,42,0.07)]
         "
       >
         <div
           className="
-            absolute
-            left-0
-            top-0
-            aspect-[1.586/1]
-            w-[250px]
+            h-3
+            w-20
+
             animate-pulse
-            rounded-[20px]
+
+            rounded
+
             bg-gray-200
-            lg:w-[300px]
           "
         />
 
         <div
           className="
-            mx-auto
-            flex
-            min-h-[150px]
-            w-full
-            max-w-[520px]
+            mt-5
+
+            h-10
+            w-52
+
             animate-pulse
-            flex-col
-            items-center
-            justify-center
-            rounded-[26px]
-            bg-black
+
+            rounded
+
+            bg-gray-200
+          "
+        />
+
+        <div
+          className="
+            mt-7
+
+            grid
+            grid-cols-3
+
+            gap-4
+
+            border-t
+            border-gray-100
+
+            pt-5
           "
         >
-          <div
-            className="
-              h-3
-              w-16
-              rounded
-              bg-white/20
-            "
-          />
+          {[1, 2, 3].map(
+            (item) => (
+              <div
+                key={item}
+              >
+                <div
+                  className="
+                    h-2
+                    w-12
 
-          <div
-            className="
-              mt-3
-              h-10
-              w-44
-              rounded
-              bg-white/20
-            "
-          />
+                    animate-pulse
+
+                    rounded
+
+                    bg-gray-200
+                  "
+                />
+
+                <div
+                  className="
+                    mt-2
+
+                    h-4
+                    w-20
+
+                    animate-pulse
+
+                    rounded
+
+                    bg-gray-200
+                  "
+                />
+              </div>
+            ),
+          )}
         </div>
       </div>
 
+      {/* SECTION */}
+
       <div
         className="
-          grid
-          grid-cols-2
-          gap-x-3
-          gap-y-5
-          sm:grid-cols-3
-          sm:gap-5
-          lg:grid-cols-4
+          px-4
+
+          sm:px-0
         "
       >
-        {Array.from({
-          length: 8,
-        }).map(
-          (
-            _,
-            index,
-          ) => (
-            <LoadingCard
-              key={
-                index
-              }
-            />
-          ),
-        )}
+        <div
+          className="
+            mb-4
+
+            h-3
+            w-24
+
+            animate-pulse
+
+            rounded
+
+            bg-gray-200
+          "
+        />
+
+        <div
+          className="
+            -mx-4
+
+            flex
+            gap-3
+
+            overflow-hidden
+
+            px-4
+
+            sm:mx-0
+
+            sm:grid
+            sm:grid-cols-3
+
+            sm:px-0
+
+            lg:grid-cols-4
+            lg:gap-5
+          "
+        >
+          {[1, 2, 3, 4].map(
+            (item) => (
+              <div
+                key={item}
+                className="
+                  aspect-[0.64/1]
+                  sm:aspect-[1.586/1]
+
+                  w-[56vw]
+                  max-w-[210px]
+
+                  shrink-0
+
+                  animate-pulse
+
+                  rounded-[18px]
+
+                  bg-gray-200
+
+                  sm:w-full
+                  sm:max-w-none
+                "
+              />
+            ),
+          )}
+        </div>
       </div>
     </div>
   );
@@ -1245,19 +1434,23 @@ function CardsSkeleton() {
 function CardsPage({
   loading = false,
 }) {
+  /* =======================================================
+     SUMMARY
+  ======================================================= */
+
   const [
     summary,
     setSummary,
   ] = useState({
-    savings:
-      "0.00",
-    actual_money:
-      "0.00",
-    total_money:
-      "0.00",
-    currency:
-      "PHP",
+    savings: "0.00",
+    actual_money: "0.00",
+    total_money: "0.00",
+    currency: "PHP",
   });
+
+  /* =======================================================
+     CARDS
+  ======================================================= */
 
   const [
     cards,
@@ -1278,6 +1471,17 @@ function CardsPage({
     dataLoading,
     setDataLoading,
   ] = useState(true);
+
+  /* =======================================================
+     VIEW
+  ======================================================= */
+
+  const [viewMode, setViewMode] = useState("cards");
+
+  const [
+    hideBalances,
+    setHideBalances,
+  ] = useState(false);
 
   /* =======================================================
      ADD CARD
@@ -1313,7 +1517,7 @@ function CardsPage({
   ] = useState(false);
 
   /* =======================================================
-     WALLET BALANCE
+     CASH
   ======================================================= */
 
   const [
@@ -1327,52 +1531,13 @@ function CardsPage({
   ] = useState(false);
 
   /* =======================================================
-     REMOVE
+     DELETE
   ======================================================= */
 
   const [
     removingId,
     setRemovingId,
   ] = useState(null);
-
-  /* =======================================================
-     FONT
-  ======================================================= */
-
-  useEffect(() => {
-    if (
-      typeof document ===
-      "undefined"
-    ) {
-      return;
-    }
-
-    if (
-      document.getElementById(
-        CARD_FONT_ID,
-      )
-    ) {
-      return;
-    }
-
-    const link =
-      document.createElement(
-        "link",
-      );
-
-    link.id =
-      CARD_FONT_ID;
-
-    link.rel =
-      "stylesheet";
-
-    link.href =
-      CARD_FONT_URL;
-
-    document.head.appendChild(
-      link,
-    );
-  }, []);
 
   /* =======================================================
      LOAD
@@ -1396,23 +1561,27 @@ function CardsPage({
             catalogData,
             cashData,
           ] =
-            await Promise.all(
-              [
-                getFinanceSummary(),
-                getMemberCards(),
-                getMemberCardCatalog(),
-                getCashAccount(),
-              ],
-            );
+            await Promise.all([
+              getFinanceSummary(),
+
+              getMemberCards(),
+
+              getMemberCardCatalog(),
+
+              getCashAccount(),
+            ]);
 
           setSummary(
             summaryData || {
               savings:
                 "0.00",
+
               actual_money:
                 "0.00",
+
               total_money:
                 "0.00",
+
               currency:
                 "PHP",
             },
@@ -1438,9 +1607,7 @@ function CardsPage({
             cashData ||
               null,
           );
-        } catch (
-          error
-        ) {
+        } catch (error) {
           console.error(
             "Unable to load member finance:",
             error,
@@ -1448,7 +1615,7 @@ function CardsPage({
 
           toast.error(
             error?.message ||
-              "Unable to load your savings.",
+              "Unable to load your accounts.",
           );
         } finally {
           setDataLoading(
@@ -1466,43 +1633,69 @@ function CardsPage({
   ]);
 
   /* =======================================================
-     CATALOG
+     ACCOUNT GROUPS
+  ======================================================= */
+
+  const cashCards =
+    useMemo(
+      () =>
+        cards.filter(
+          (account) =>
+            getAccountGroup(
+              account,
+            ) === "cash",
+        ),
+      [
+        cards,
+      ],
+    );
+
+  const creditCards =
+    useMemo(
+      () =>
+        cards.filter(
+          (account) =>
+            getAccountGroup(
+              account,
+            ) === "credit",
+        ),
+      [
+        cards,
+      ],
+    );
+
+  /* =======================================================
+     EXISTING PROVIDERS
   ======================================================= */
 
   const existingProviderIds =
     useMemo(() => {
-      const ids =
+      return new Set(
         cards
           .map(
-            (
-              account,
-            ) =>
-              getAccountProviderId(
-                account,
-              ),
+            getAccountProviderId,
           )
           .filter(
             (id) =>
               id !== null,
-          );
-
-      return new Set(
-        ids,
+          ),
       );
     }, [
       cards,
     ]);
 
+  /* =======================================================
+     AVAILABLE PROVIDERS
+  ======================================================= */
+
   const availableCatalog =
     useMemo(
       () =>
         catalog.filter(
-          (
-            provider,
-          ) =>
+          (provider) =>
             !existingProviderIds.has(
               Number(
-                provider.id,
+                provider?.id,
               ),
             ),
         ),
@@ -1520,13 +1713,24 @@ function CardsPage({
      ADD CARD
   ======================================================= */
 
+  const handleOpenAdd =
+    () => {
+      if (!canAddCard) {
+        toast(
+          "You already added all available cards.",
+        );
+
+        return;
+      }
+
+      setAddModalOpen(
+        true,
+      );
+    };
+
   const handleAddCard =
-    async (
-      values,
-    ) => {
-      if (
-        addingCard
-      ) {
+    async (values) => {
+      if (addingCard) {
         return;
       }
 
@@ -1550,11 +1754,9 @@ function CardsPage({
         await loadFinance({
           silent: true,
         });
-      } catch (
-        error
-      ) {
+      } catch (error) {
         console.error(
-          "Unable to add member card:",
+          "Unable to add card:",
           error,
         );
 
@@ -1569,41 +1771,15 @@ function CardsPage({
       }
     };
 
-  const handleOpenAdd =
-    () => {
-      if (
-        !canAddCard
-      ) {
-        toast(
-          "You already added all available cards.",
-        );
-
-        return;
-      }
-
-      setAddModalOpen(
-        true,
-      );
-    };
-
   /* =======================================================
-     WALLET BALANCE
+     CASH BALANCE
   ======================================================= */
-
-  const handleOpenWalletBalance =
-    () => {
-      setWalletModalOpen(
-        true,
-      );
-    };
 
   const handleSaveWalletBalance =
     async ({
       amount,
     }) => {
-      if (
-        walletSaving
-      ) {
+      if (walletSaving) {
         return;
       }
 
@@ -1621,23 +1797,21 @@ function CardsPage({
         );
 
         toast.success(
-          "Wallet balance updated.",
+          "Cash balance updated.",
         );
 
         await loadFinance({
           silent: true,
         });
-      } catch (
-        error
-      ) {
+      } catch (error) {
         console.error(
-          "Unable to update wallet balance:",
+          "Unable to update cash balance:",
           error,
         );
 
         toast.error(
           error?.message ||
-            "Unable to update wallet.",
+            "Unable to update cash balance.",
         );
       } finally {
         setWalletSaving(
@@ -1650,17 +1824,18 @@ function CardsPage({
      TRANSFER
   ======================================================= */
 
-  const handleOpenTransfer = (
-    source = null,
-  ) => {
-    setTransferSource(
-      source,
-    );
+  const handleOpenTransfer =
+    (
+      source = null,
+    ) => {
+      setTransferSource(
+        source,
+      );
 
-    setTransferModalOpen(
-      true,
-    );
-  };
+      setTransferModalOpen(
+        true,
+      );
+    };
 
   const handleOpenWalletTransfer =
     () => {
@@ -1684,24 +1859,20 @@ function CardsPage({
           "cash",
 
         name:
-          "Datong Wallet",
+          "Cash",
 
         balance:
           cashAccount
             ?.balance ??
           summary
-            .actual_money ??
+            ?.actual_money ??
           "0.00",
       });
     };
 
   const handleTransfer =
-    async (
-      values,
-    ) => {
-      if (
-        transferring
-      ) {
+    async (values) => {
+      if (transferring) {
         return;
       }
 
@@ -1729,9 +1900,7 @@ function CardsPage({
         await loadFinance({
           silent: true,
         });
-      } catch (
-        error
-      ) {
+      } catch (error) {
         console.error(
           "Unable to transfer money:",
           error,
@@ -1753,9 +1922,7 @@ function CardsPage({
   ======================================================= */
 
   const handleRemoveCard =
-    async (
-      account,
-    ) => {
+    async (account) => {
       if (
         !account ||
         removingId !== null
@@ -1776,8 +1943,7 @@ function CardsPage({
 
           text:
             `Remove ${cardName}? Its ${formatPeso(
-              account
-                ?.balance ||
+              account?.balance ||
                 0,
             )} balance will be subtracted from your savings.`,
 
@@ -1788,9 +1954,7 @@ function CardsPage({
             "Cancel",
         });
 
-      if (
-        !confirmed
-      ) {
+      if (!confirmed) {
         return;
       }
 
@@ -1804,17 +1968,15 @@ function CardsPage({
         );
 
         toast.success(
-          "Card removed. Savings updated.",
+          "Card removed.",
         );
 
         await loadFinance({
           silent: true,
         });
-      } catch (
-        error
-      ) {
+      } catch (error) {
         console.error(
-          "Unable to remove member card:",
+          "Unable to remove card:",
           error,
         );
 
@@ -1842,198 +2004,327 @@ function CardsPage({
     );
   }
 
-  const minimumSlots =
-    8;
-
-  const emptySlots =
-    Math.max(
-      0,
-      minimumSlots -
-        cards.length,
-    );
+  /* =======================================================
+     RENDER
+  ======================================================= */
 
   return (
     <>
       <main
         className="
           relative
+
           mx-auto
+
           min-h-[calc(100vh-120px)]
+
           w-full
           max-w-[1180px]
-          px-1
+
           pb-32
-          pt-8
-          sm:px-4
+          pt-2
+
           sm:pb-12
-          sm:pt-12
+          sm:pt-5
         "
       >
         {/* =================================================
-            MOBILE
+            NET WORTH
         ================================================= */}
 
-        <section
-          className="
-            mb-8
-            sm:hidden
-          "
-        >
-          <BalanceFlipCard
-            savings={
-              summary.savings ||
-              0
-            }
-            wallet={
-              summary
-                .actual_money ||
-              0
-            }
-            onWalletEdit={
-              handleOpenWalletBalance
-            }
-            onWalletTransfer={
-              handleOpenWalletTransfer
-            }
-          />
-        </section>
+        <NetWorthSummary
+          summary={summary}
+          cardCount={
+            cards.length
+          }
+          hidden={
+            hideBalances
+          }
+          onToggleHidden={() =>
+            setHideBalances(
+              (current) =>
+                !current,
+            )
+          }
+        />
 
         {/* =================================================
-            DESKTOP / TABLET
+            CASH & BANK
+
+            Mobile gets px-4 so:
+            - label aligns
+            - controls align
+            - first card aligns
         ================================================= */}
 
         <section
           className="
-            relative
-            hidden
-            min-h-[255px]
-            sm:block
-            lg:min-h-[220px]
+            px-4
+
+            sm:px-0
           "
         >
+          {/* HEADER */}
+
           <div
             className="
-              absolute
-              left-0
-              top-0
-              z-10
+              mb-4
+
+              flex
+              items-center
+              justify-between
+
+              gap-3
             "
           >
-            <DatongWalletSummary
+            <div
+              className="
+                min-w-0
+              "
+            >
+              <h2
+                className="
+                  text-[10px]
+                  font-semibold
+                  uppercase
+                  tracking-[0.14em]
+
+                  text-gray-400
+                "
+              >
+                Cash & Bank
+              </h2>
+
+              <p
+                className="
+                  mt-1
+
+                  text-[9px]
+
+                  text-gray-400
+                "
+              >
+                {
+                  cashCards.length
+                }{" "}
+                {cashCards.length ===
+                1
+                  ? "account"
+                  : "accounts"}
+              </p>
+            </div>
+
+            <ViewSwitcher
+              value={viewMode}
+              onChange={setViewMode}
+            />
+          </div>
+
+          {/* =================================================
+              ACCOUNTS
+
+              Cash now appears on:
+              MOBILE + DESKTOP
+          ================================================= */}
+
+          <AccountLayout
+            mode={
+              viewMode
+            }
+          >
+            {/* CASH */}
+
+            <CashCard
               balance={
                 summary
-                  .actual_money ||
+                  ?.actual_money ||
                 0
               }
-              onEdit={
-                handleOpenWalletBalance
+              hidden={
+                hideBalances
+              }
+              viewMode={
+                viewMode
+              }
+              onEdit={() =>
+                setWalletModalOpen(
+                  true,
+                )
               }
               onTransfer={
                 handleOpenWalletTransfer
               }
             />
-          </div>
 
-          <div
-            className="
-              mx-auto
-              w-full
-              max-w-[520px]
-              sm:pt-[185px]
-              lg:pt-0
-            "
-          >
-            <SavingsSummary
-              balance={
-                summary
-                  .savings ||
-                0
-              }
-            />
-          </div>
+            {/* BANK / E-WALLET */}
+
+            <AnimatePresence
+              mode="popLayout"
+            >
+              {cashCards.map(
+                (account) => (
+                  <SavingsCard
+                    key={
+                      account.id
+                    }
+                    account={
+                      account
+                    }
+                    hidden={
+                      hideBalances
+                    }
+                    viewMode={
+                      viewMode
+                    }
+                    removing={
+                      removingId ===
+                      account.id
+                    }
+                    onTransfer={
+                      handleOpenTransfer
+                    }
+                    onRemove={
+                      handleRemoveCard
+                    }
+                  />
+                ),
+              )}
+            </AnimatePresence>
+
+            {/* ADD */}
+
+            {canAddCard && (
+              <AddCardSlot
+                viewMode={
+                  viewMode
+                }
+                onClick={
+                  handleOpenAdd
+                }
+              />
+            )}
+          </AccountLayout>
         </section>
 
         {/* =================================================
-            CARDS
+            CREDIT
         ================================================= */}
 
-        <section
-          className="
-            grid
-            grid-cols-2
-            gap-x-3
-            gap-y-5
-            sm:grid-cols-3
-            sm:gap-5
-            lg:grid-cols-4
-            xl:gap-x-6
-            xl:gap-y-7
-          "
-        >
-          <AnimatePresence
-            mode="popLayout"
+        {creditCards.length >
+          0 && (
+          <section
+            className="
+              mt-9
+
+              px-4
+
+              sm:px-0
+            "
           >
-            {cards.map(
-              (
-                account,
-              ) => (
-                <SavingsCard
-                  key={
-                    account.id
-                  }
-                  account={
-                    account
-                  }
-                  removing={
-                    removingId ===
-                    account.id
-                  }
-                  onTransfer={
-                    handleOpenTransfer
-                  }
-                  onRemove={
-                    handleRemoveCard
-                  }
-                />
-              ),
-            )}
-          </AnimatePresence>
+            <div
+              className="
+                mb-4
 
-          {Array.from({
-            length:
-              emptySlots,
-          }).map(
-            (
-              _,
-              index,
-            ) => {
-              if (
-                index ===
-                  0 &&
-                canAddCard
-              ) {
-                return (
-                  <AddCardSlot
-                    key={`empty-${index}`}
-                    onClick={
-                      handleOpenAdd
-                    }
-                  />
-                );
+                flex
+                items-center
+                justify-between
+              "
+            >
+              <div>
+                <h2
+                  className="
+                    text-[10px]
+                    font-semibold
+                    uppercase
+                    tracking-[0.14em]
+
+                    text-gray-400
+                  "
+                >
+                  Credit
+                </h2>
+
+                <p
+                  className="
+                    mt-1
+
+                    text-[9px]
+
+                    text-gray-400
+                  "
+                >
+                  {
+                    creditCards.length
+                  }{" "}
+                  {creditCards.length ===
+                  1
+                    ? "account"
+                    : "accounts"}
+                </p>
+              </div>
+            </div>
+
+            <AccountLayout
+              mode={
+                viewMode
               }
-
-              return (
-                <EmptyCardSlot
-                  key={`empty-${index}`}
-                />
-              );
-            },
-          )}
-        </section>
+            >
+              <AnimatePresence
+                mode="popLayout"
+              >
+                {creditCards.map(
+                  (account) => (
+                    <SavingsCard
+                      key={
+                        account.id
+                      }
+                      account={
+                        account
+                      }
+                      hidden={
+                        hideBalances
+                      }
+                      viewMode={
+                        viewMode
+                      }
+                      removing={
+                        removingId ===
+                        account.id
+                      }
+                      onTransfer={
+                        handleOpenTransfer
+                      }
+                      onRemove={
+                        handleRemoveCard
+                      }
+                    />
+                  ),
+                )}
+              </AnimatePresence>
+            </AccountLayout>
+          </section>
+        )}
       </main>
 
       {/* ===================================================
-          ADD CARD
+          MOBILE FLOATING ADD
+
+          Always visible on the Cards page.
+          If all providers are already added, handleOpenAdd()
+          shows the existing toast instead of opening the modal.
+      =================================================== */}
+
+      <AnimatePresence>
+        {!addModalOpen && !walletModalOpen && !transferModalOpen && (
+          <MobileFloatingAddButton
+            label="Add card"
+            onClick={handleOpenAdd}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ===================================================
+          ADD CARD MODAL
       =================================================== */}
 
       <AnimatePresence>
@@ -2070,7 +2361,7 @@ function CardsPage({
       </AnimatePresence>
 
       {/* ===================================================
-          WALLET BALANCE
+          CASH BALANCE MODAL
       =================================================== */}
 
       <AnimatePresence>
@@ -2104,7 +2395,7 @@ function CardsPage({
       </AnimatePresence>
 
       {/* ===================================================
-          TRANSFER
+          TRANSFER MODAL
       =================================================== */}
 
       <AnimatePresence>
