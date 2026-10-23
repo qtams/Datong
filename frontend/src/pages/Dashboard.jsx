@@ -6,8 +6,7 @@ import {
   ChevronRight,
   CreditCard,
   Landmark,
-  LoaderCircle,
-  Plus,
+  PiggyBank,
   ReceiptText,
   RefreshCw,
   Wallet,
@@ -21,19 +20,21 @@ import {
 } from "react";
 
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
 import { useAuth } from "../auth/AuthContext";
 
 import PageHeader from "../components/PageHeader";
 import { DashboardSkeleton } from "../components/SkeletonLoader";
+import WalletBalanceModal from "../components/modals/WalletBalanceModal";
 
 import {
+  getCashAccount,
   getFinanceSummary,
   getMemberCards,
   getMemberTransfers,
+  updateCashBalance,
 } from "../services/memberFinanceApi";
-
-import datongWalletImage from "../assets/datong_wallet.webp";
 
 /* =========================================================
    MONEY
@@ -78,30 +79,61 @@ function formatTransactionDate(value) {
 
 function MemberDashboardLoading() {
   return (
-    <div className="space-y-5 animate-pulse">
+    <div className="animate-pulse">
+      {/* MOBILE INTRO */}
+
+      <div className="mb-4 lg:hidden">
+        <div className="h-2.5 w-24 rounded bg-gray-200" />
+
+        <div className="mt-2 flex items-end justify-between">
+          <div className="h-6 w-28 rounded bg-gray-200" />
+
+          <div className="h-2.5 w-12 rounded bg-gray-200" />
+        </div>
+      </div>
+
       {/* WALLET */}
 
-      <div className="h-[230px] rounded-[24px] bg-gray-200" />
+      <div className="h-[180px] rounded-[24px] bg-gray-200" />
+
+      {/* QUICK ACTIONS */}
+
+      <div className="mt-3 grid grid-cols-3 gap-2 sm:gap-3">
+        {[1, 2, 3].map((item) => (
+          <div
+            key={item}
+            className="h-[104px] rounded-[20px] bg-gray-200 sm:h-[112px]"
+          />
+        ))}
+      </div>
 
       {/* CARDS */}
 
-      <div>
+      <div className="mt-6">
         <div className="mb-3 flex items-center justify-between">
-          <div className="h-5 w-24 rounded bg-gray-200" />
+          <div>
+            <div className="h-4 w-20 rounded bg-gray-200" />
 
-          <div className="h-4 w-16 rounded bg-gray-200" />
+            <div className="mt-2 h-2.5 w-16 rounded bg-gray-200" />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="h-9 w-[68px] rounded-full bg-gray-200" />
+
+            <div className="h-3 w-12 rounded bg-gray-200" />
+          </div>
         </div>
 
         <div className="flex gap-3 overflow-hidden">
-          <div className="h-[170px] w-[82%] shrink-0 rounded-[20px] bg-gray-200 sm:w-[330px]" />
+          <div className="aspect-[1.65/1] w-[84vw] max-w-[340px] shrink-0 rounded-[18px] bg-gray-200 sm:w-[330px]" />
 
-          <div className="h-[170px] w-[82%] shrink-0 rounded-[20px] bg-gray-200 sm:w-[330px]" />
+          <div className="aspect-[1.65/1] w-[84vw] max-w-[340px] shrink-0 rounded-[18px] bg-gray-200 sm:w-[330px]" />
         </div>
       </div>
 
       {/* TRANSACTIONS */}
 
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+      <div className="mt-5 overflow-hidden rounded-2xl border border-gray-200 bg-white">
         <div className="border-b border-gray-100 p-4">
           <div className="h-5 w-32 rounded bg-gray-200" />
         </div>
@@ -132,15 +164,12 @@ function MemberDashboardLoading() {
    WALLET HERO
 ========================================================= */
 
-function WalletHero({
-  summary,
-  onCards,
-  onTransactions,
-}) {
+function WalletHero({ summary }) {
   return (
     <section
       className="
         relative
+        min-h-[180px]
         overflow-hidden
         rounded-[24px]
         bg-black
@@ -148,93 +177,39 @@ function WalletHero({
         shadow-[0_18px_45px_rgba(0,0,0,0.12)]
       "
     >
-      {/* BACKGROUND */}
-
-      <div
-        aria-hidden="true"
-        className="
-          pointer-events-none
-          absolute
-          -right-16
-          -top-10
-          h-[280px]
-          w-[280px]
-          opacity-[0.17]
-        "
-      >
-        <img
-          src={datongWalletImage}
-          alt=""
-          className="h-full w-full object-contain"
-        />
-      </div>
-
-      <div
-        aria-hidden="true"
-        className="
-          pointer-events-none
-          absolute
-          inset-0
-          bg-gradient-to-br
-          from-white/[0.08]
-          via-transparent
-          to-white/[0.03]
-        "
-      />
-
       {/* CONTENT */}
 
-      <div className="relative z-10 p-5 sm:p-6">
+      <div className="p-5 sm:p-6">
         {/* TOP */}
 
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <div
-                className="
-                  flex
-                  h-8
-                  w-8
-                  items-center
-                  justify-center
-                  rounded-xl
-                  bg-white/10
-                "
-              >
-                <Wallet
-                  size={15}
-                  strokeWidth={1.7}
-                />
-              </div>
-
-              <span
-                className="
-                  text-[10px]
-                  font-semibold
-                  uppercase
-                  tracking-[0.14em]
-                  text-white/50
-                "
-              >
-                Datong Wallet
-              </span>
-            </div>
+        <div className="flex items-center gap-2">
+          <div
+            className="
+              flex
+              h-8
+              w-8
+              items-center
+              justify-center
+              rounded-xl
+              bg-white/10
+            "
+          >
+            <Wallet
+              size={15}
+              strokeWidth={1.7}
+            />
           </div>
 
           <span
             className="
-              rounded-full
-              border
-              border-white/10
-              bg-white/[0.08]
-              px-2.5
-              py-1
-              text-[9px]
-              font-medium
-              text-white/65
+              text-[10px]
+              font-semibold
+              uppercase
+              tracking-[0.14em]
+              text-white/50
             "
           >
-            PHP
+            Datong Wallet
           </span>
         </div>
 
@@ -260,109 +235,186 @@ function WalletHero({
             )}
           </h1>
         </div>
-
-        {/* TOTALS */}
-
-        <div
-          className="
-            mt-7
-            grid
-            grid-cols-2
-            divide-x
-            divide-white/10
-            rounded-2xl
-            border
-            border-white/10
-            bg-white/[0.06]
-            backdrop-blur-sm
-          "
-        >
-          <div className="p-3.5">
-            <p className="text-[9px] text-white/40">
-              Savings
-            </p>
-
-            <p className="mt-1 text-[12px] font-semibold text-white">
-              {formatPeso(
-                summary?.savings,
-              )}
-            </p>
-          </div>
-
-          <div className="p-3.5">
-            <p className="text-[9px] text-white/40">
-              Total money
-            </p>
-
-            <p className="mt-1 text-[12px] font-semibold text-white">
-              {formatPeso(
-                summary?.total_money,
-              )}
-            </p>
-          </div>
-        </div>
-
-        {/* ACTIONS */}
-
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={onCards}
-            className="
-              flex
-              h-10
-              items-center
-              justify-center
-              gap-2
-              rounded-xl
-              bg-white
-              px-4
-              text-[10px]
-              font-semibold
-              text-black
-              transition
-              active:scale-[0.98]
-            "
-          >
-            <CreditCard
-              size={14}
-              strokeWidth={1.7}
-            />
-
-            My cards
-          </button>
-
-          <button
-            type="button"
-            onClick={onTransactions}
-            className="
-              flex
-              h-10
-              items-center
-              justify-center
-              gap-2
-              rounded-xl
-              border
-              border-white/10
-              bg-white/[0.08]
-              px-4
-              text-[10px]
-              font-semibold
-              text-white
-              transition
-              active:scale-[0.98]
-            "
-          >
-            <ArrowRightLeft
-              size={14}
-              strokeWidth={1.7}
-            />
-
-            Transactions
-          </button>
-        </div>
       </div>
     </section>
+  );
+}
+
+/* =========================================================
+   QUICK ACTIONS
+========================================================= */
+
+function QuickActions({ onNavigate, onWallet }) {
+  const actions = [
+    {
+      label: "Add Datong wallet",
+      icon: Wallet,
+      onClick: onWallet,
+    },
+    {
+      label: "Expenses",
+      icon: ReceiptText,
+      onClick: () => onNavigate("/transactions"),
+    },
+    {
+      label: "Saving goals",
+      icon: PiggyBank,
+      onClick: () => onNavigate("/savings-goals"),
+    },
+  ];
+
+  return (
+    <section
+      aria-label="Quick actions"
+      className="grid grid-cols-3 gap-2 sm:gap-3"
+    >
+      {actions.map(({ label, icon: Icon, onClick }) => (
+        <button
+          key={label}
+          type="button"
+          onClick={onClick}
+          className="
+            group
+            flex
+            h-[104px]
+            flex-col
+            items-center
+            justify-center
+            gap-2.5
+            rounded-[20px]
+            border
+            border-gray-200/90
+            bg-white
+            p-3
+            text-center
+            shadow-[0_4px_14px_rgba(15,23,42,0.05)]
+            transition-all
+            duration-200
+            hover:-translate-y-1
+            hover:border-gray-300/90
+            hover:shadow-[0_10px_24px_rgba(15,23,42,0.09)]
+            focus-visible:outline-none
+            focus-visible:ring-2
+            focus-visible:ring-black/15
+            active:translate-y-0
+            active:scale-[0.98]
+            sm:h-[112px]
+            sm:p-4
+          "
+        >
+          <span
+            className="
+              flex
+              h-9
+              w-9
+              shrink-0
+              items-center
+              justify-center
+              rounded-full
+              bg-gray-100/90
+              text-gray-700
+              transition-colors
+              group-hover:bg-black
+              group-hover:text-white
+            "
+          >
+            <Icon size={16} strokeWidth={1.7} />
+          </span>
+
+          <span className="flex min-h-8 items-center justify-center text-[10px] font-semibold leading-[1.25] text-gray-900 sm:text-[11px]">
+            {label}
+          </span>
+        </button>
+      ))}
+    </section>
+  );
+}
+
+/* =========================================================
+   DASHBOARD CARD VIEW
+========================================================= */
+
+function PortraitCardIcon({ size = 13, strokeWidth = 1.7 }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <rect
+        x="6.5"
+        y="2.5"
+        width="11"
+        height="19"
+        rx="2.5"
+        stroke="currentColor"
+        strokeWidth={strokeWidth}
+      />
+      <path
+        d="M8.8 7h6.4"
+        stroke="currentColor"
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function CardViewSwitcher({ value, onChange }) {
+  const modes = [
+    {
+      id: "landscape",
+      label: "Landscape cards",
+      icon: CreditCard,
+    },
+    {
+      id: "portrait",
+      label: "Portrait cards",
+      icon: PortraitCardIcon,
+    },
+  ];
+
+  return (
+    <div
+      className="inline-flex items-center gap-0.5 rounded-full bg-gray-200/80 p-1"
+      aria-label="Card view"
+    >
+      {modes.map(({ id, label, icon: Icon }) => {
+        const active = value === id;
+
+        return (
+          <button
+            key={id}
+            type="button"
+            title={label}
+            aria-label={label}
+            aria-pressed={active}
+            onClick={() => onChange(id)}
+            className={`
+              flex
+              h-7
+              w-7
+              items-center
+              justify-center
+              rounded-full
+              transition-all
+              ${
+                active
+                  ? "bg-white text-gray-950 shadow-sm"
+                  : "text-gray-400 hover:text-gray-700"
+              }
+            `}
+          >
+            <Icon
+              size={13}
+              strokeWidth={active ? 2 : 1.6}
+            />
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -372,15 +424,28 @@ function WalletHero({
 
 function MemberCard({
   card,
+  viewMode,
   onClick,
 }) {
   const provider =
     card?.provider || {};
 
-  const image =
+  const landscapeImage =
     provider?.landscape_image_url ||
     provider?.portrait_image_url ||
     "";
+
+  const portraitImage =
+    provider?.portrait_image_url ||
+    provider?.landscape_image_url ||
+    "";
+
+  const portraitMode =
+    viewMode === "portrait";
+
+  const image = portraitMode
+    ? portraitImage
+    : landscapeImage;
 
   const cardName =
     card?.name ||
@@ -391,87 +456,83 @@ function MemberCard({
     <button
       type="button"
       onClick={onClick}
+      aria-label={`${cardName}, ${formatPeso(card?.balance)}`}
       className="
+        group
         relative
-        h-[175px]
-        w-[84vw]
-        max-w-[340px]
         shrink-0
         snap-start
-        overflow-hidden
-        rounded-[20px]
-        border
-        border-gray-200
-        bg-[#151515]
-        text-left
-        shadow-sm
-        transition
+        bg-transparent
+        text-center
+        transition-transform
+        hover:-translate-y-0.5
         active:scale-[0.985]
-        sm:w-[330px]
       "
+      style={{
+        aspectRatio: portraitMode ? "0.64 / 1" : "1.65 / 1",
+        width: portraitMode
+          ? "min(54vw, 205px)"
+          : "min(84vw, 340px)",
+      }}
     >
       {/* IMAGE */}
 
-      {image ? (
-        <img
-          src={image}
-          alt={provider?.name || cardName}
-          className="absolute inset-0 h-full w-full object-cover"
-        />
-      ) : (
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-950 via-gray-800 to-black" />
-      )}
-
-      {/* OVERLAY */}
-
-      <div
-        className="
-          absolute
-          inset-0
-          bg-gradient-to-t
-          from-black/80
-          via-black/20
-          to-black/5
-        "
-      />
-
-      {/* CONTENT */}
-
-      <div className="absolute inset-0 flex flex-col justify-between p-4">
-        <div className="flex items-start justify-between">
-          <span
-            className="
-              rounded-full
-              border
-              border-white/15
-              bg-black/20
-              px-2.5
-              py-1
-              text-[9px]
-              font-medium
-              text-white
-              backdrop-blur-md
-            "
-          >
-            {provider?.name || "Savings"}
-          </span>
-
-          <ChevronRight
-            size={17}
-            className="text-white/70"
+      <span className="flex h-full w-full items-center justify-center">
+        {image ? (
+          <img
+            src={image}
+            alt={`${provider?.name || cardName} ${
+              portraitMode ? "portrait" : "landscape"
+            }`}
+            className={`
+              w-full
+              rounded-[18px]
+              ${
+                portraitMode
+                  ? "h-[91.5%] object-cover"
+                  : "h-full object-contain"
+              }
+            `}
           />
-        </div>
+        ) : (
+          <span className="flex h-full w-full items-center justify-center text-gray-300">
+            <CreditCard size={40} strokeWidth={1.25} />
+          </span>
+        )}
+      </span>
 
-        <div>
-          <p className="truncate text-[10px] font-medium text-white/65">
-            {cardName}
-          </p>
+      {/* AMOUNT */}
 
-          <p className="mt-1 text-[20px] font-semibold tracking-[-0.03em] text-white">
-            {formatPeso(card?.balance)}
-          </p>
-        </div>
-      </div>
+      <span
+        className={`
+          absolute
+          z-10
+          flex
+          max-w-[72%]
+          flex-col
+          items-start
+          text-left
+          text-white
+          [text-shadow:0_1px_3px_rgba(0,0,0,0.75)]
+          ${portraitMode ? "bottom-[12%] left-[10%]" : "bottom-[9%] left-[8%]"}
+        `}
+      >
+        <span className="max-w-full truncate text-[9px] font-medium leading-none text-white/85 sm:text-[10px]">
+          {cardName}
+        </span>
+
+        <span
+          className={`
+            mt-1
+            font-bold
+            leading-none
+            tracking-[-0.025em]
+            ${portraitMode ? "text-[13px] sm:text-[14px]" : "text-[14px] sm:text-[16px]"}
+          `}
+        >
+          {formatPeso(card?.balance)}
+        </span>
+      </span>
     </button>
   );
 }
@@ -484,6 +545,9 @@ function CardsSection({
   cards,
   onViewAll,
 }) {
+  const [viewMode, setViewMode] =
+    useState("landscape");
+
   return (
     <section>
       {/* HEADER */}
@@ -491,38 +555,45 @@ function CardsSection({
       <div className="mb-3 flex items-end justify-between">
         <div>
           <h2 className="text-[15px] font-semibold tracking-[-0.02em] text-gray-950">
-            My cards
+            Accounts
           </h2>
 
           <p className="mt-0.5 text-[10px] text-gray-400">
             {cards.length > 0
-              ? `${cards.length} savings ${
+              ? `${cards.length} card ${
                   cards.length === 1
                     ? "account"
                     : "accounts"
                 }`
-              : "Your savings accounts"}
+              : "Your bank and e-wallet cards"}
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={onViewAll}
-          className="
-            flex
-            items-center
-            gap-1
-            text-[10px]
-            font-medium
-            text-gray-500
-            transition-colors
-            hover:text-black
-          "
-        >
-          View all
+        <div className="flex items-center gap-2">
+          <CardViewSwitcher
+            value={viewMode}
+            onChange={setViewMode}
+          />
 
-          <ChevronRight size={13} />
-        </button>
+          <button
+            type="button"
+            onClick={onViewAll}
+            className="
+              flex
+              items-center
+              gap-1
+              text-[10px]
+              font-medium
+              text-gray-500
+              transition-colors
+              hover:text-black
+            "
+          >
+            View all
+
+            <ChevronRight size={13} />
+          </button>
+        </div>
       </div>
 
       {/* CARDS */}
@@ -540,62 +611,18 @@ function CardsSection({
             pb-2
             sm:mx-0
             sm:px-0
+            [scrollbar-width:none]
+            [&::-webkit-scrollbar]:hidden
           "
         >
           {cards.map((card) => (
             <MemberCard
               key={card.id}
               card={card}
+              viewMode={viewMode}
               onClick={onViewAll}
             />
           ))}
-
-          {/* ADD CARD */}
-
-          <button
-            type="button"
-            onClick={onViewAll}
-            className="
-              flex
-              h-[175px]
-              w-[145px]
-              shrink-0
-              snap-start
-              flex-col
-              items-center
-              justify-center
-              rounded-[20px]
-              border
-              border-dashed
-              border-gray-300
-              bg-white
-              text-gray-400
-              transition
-              hover:border-gray-400
-              hover:text-gray-800
-            "
-          >
-            <div
-              className="
-                flex
-                h-10
-                w-10
-                items-center
-                justify-center
-                rounded-full
-                bg-gray-100
-              "
-            >
-              <Plus
-                size={17}
-                strokeWidth={1.7}
-              />
-            </div>
-
-            <span className="mt-2 text-[10px] font-medium">
-              Add card
-            </span>
-          </button>
         </div>
       ) : (
         <button
@@ -891,6 +918,9 @@ function MemberDashboard() {
   const [cards, setCards] =
     useState([]);
 
+  const [cashAccount, setCashAccount] =
+    useState(null);
+
   const [
     transactions,
     setTransactions,
@@ -906,6 +936,16 @@ function MemberDashboard() {
     setLoadError,
   ] = useState("");
 
+  const [
+    walletModalOpen,
+    setWalletModalOpen,
+  ] = useState(false);
+
+  const [
+    walletSaving,
+    setWalletSaving,
+  ] = useState(false);
+
   /* =======================================================
      LOAD DATA
   ======================================================= */
@@ -920,10 +960,12 @@ function MemberDashboard() {
           summaryData,
           cardsData,
           transactionsData,
+          cashData,
         ] = await Promise.all([
           getFinanceSummary(),
           getMemberCards(),
           getMemberTransfers(),
+          getCashAccount(),
         ]);
 
         setSummary(
@@ -939,6 +981,15 @@ function MemberDashboard() {
           Array.isArray(cardsData)
             ? cardsData
             : [],
+        );
+
+        setCashAccount(
+          cashData || {
+            balance:
+              summaryData
+                ?.actual_money ||
+              "0.00",
+          },
         );
 
         setTransactions(
@@ -966,6 +1017,53 @@ function MemberDashboard() {
   useEffect(() => {
     loadDashboard();
   }, [loadDashboard]);
+
+  /* =======================================================
+     WALLET BALANCE
+  ======================================================= */
+
+  const handleSaveWalletBalance =
+    async ({ amount }) => {
+      if (walletSaving) {
+        return;
+      }
+
+      try {
+        setWalletSaving(true);
+
+        await updateCashBalance(
+          amount,
+        );
+
+        const [
+          summaryData,
+          cashData,
+        ] = await Promise.all([
+          getFinanceSummary(),
+          getCashAccount(),
+        ]);
+
+        setSummary(summaryData);
+        setCashAccount(cashData);
+        setWalletModalOpen(false);
+
+        toast.success(
+          "Wallet balance updated.",
+        );
+      } catch (error) {
+        console.error(
+          "Unable to update wallet balance:",
+          error,
+        );
+
+        toast.error(
+          error?.message ||
+            "Unable to update wallet balance.",
+        );
+      } finally {
+        setWalletSaving(false);
+      }
+    };
 
   /* =======================================================
      MOBILE BALANCE INFO
@@ -1139,39 +1237,38 @@ function MemberDashboard() {
 
           MOBILE:
           1. Wallet
-          2. Cards
-          3. Transactions
+          2. Quick actions
+          3. Card accounts
+          4. Transactions
 
           DESKTOP:
-          Wallet + Cards
-          Transactions below
+          Wallet
+          Quick actions
+          Card accounts + transactions below
       =================================================== */}
 
-      <div
-        className="
-          grid
-          grid-cols-1
-          gap-5
-          lg:grid-cols-[minmax(330px,0.85fr)_minmax(0,1.4fr)]
-          lg:items-start
-        "
-      >
-        {/* 1. WALLET */}
+      {/* 1. WALLET */}
 
-        <WalletHero
-          summary={summary}
-          onCards={() =>
-            navigate("/cards")
-          }
-          onTransactions={() =>
-            navigate(
-              "/transactions",
-            )
+      <WalletHero summary={summary} />
+
+      {/* 2. QUICK ACTIONS */}
+
+      <div className="mt-3">
+        <QuickActions
+          onNavigate={navigate}
+          onWallet={() =>
+            setWalletModalOpen(true)
           }
         />
+      </div>
 
-        {/* 2. CARDS */}
+      {/* 3. CARD ACCOUNTS
 
+          The Datong cash wallet stays in the hero above.
+          This strip intentionally renders member cards only.
+      =================================================== */}
+
+      <div className="mt-6">
         <CardsSection
           cards={cards}
           onViewAll={() =>
@@ -1180,7 +1277,7 @@ function MemberDashboard() {
         />
       </div>
 
-      {/* 3. TRANSACTIONS */}
+      {/* 4. TRANSACTIONS */}
 
       <div className="mt-5">
         <TransactionsSection
@@ -1194,6 +1291,18 @@ function MemberDashboard() {
           }
         />
       </div>
+
+      <WalletBalanceModal
+        open={walletModalOpen}
+        cashAccount={cashAccount}
+        submitting={walletSaving}
+        onClose={() => {
+          if (!walletSaving) {
+            setWalletModalOpen(false);
+          }
+        }}
+        onSubmit={handleSaveWalletBalance}
+      />
     </div>
   );
 }
@@ -1414,12 +1523,12 @@ function Dashboard({
   const { isMember } =
     useAuth();
 
-  if (loading) {
-    return <DashboardSkeleton />;
-  }
-
   if (isMember) {
     return <MemberDashboard />;
+  }
+
+  if (loading) {
+    return <DashboardSkeleton />;
   }
 
   return <InternalDashboard />;

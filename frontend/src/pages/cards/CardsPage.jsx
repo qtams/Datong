@@ -665,7 +665,20 @@ function SavingsCard({
       `}
     >
       {/* MOBILE IMAGE */}
-      <div className="absolute inset-0 overflow-hidden rounded-[18px] bg-transparent sm:hidden">
+      <div
+        className={`
+          absolute
+          overflow-hidden
+          rounded-[18px]
+          bg-transparent
+          sm:hidden
+          ${
+            portraitMode
+              ? "inset-x-0 top-1/2 h-[91.5%] -translate-y-1/2"
+              : "inset-0"
+          }
+        `}
+      >
         <ReflectiveBankImage
           image={mobileImage}
           alt={`${name} ${portraitMode ? "portrait" : "landscape"}`}
@@ -682,14 +695,14 @@ function SavingsCard({
 
       {/* NAME + MONEY ONLY. NO GRADIENT / NO BACKGROUND. */}
       <div
-        className="
+        className={`
           pointer-events-none
           absolute
-          bottom-[7%]
           left-[7%]
           z-20
           max-w-[78%]
-        "
+          ${portraitMode ? "bottom-[12%]" : "bottom-[7%]"}
+        `}
       >
         <p
           className="
