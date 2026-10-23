@@ -15,6 +15,8 @@ import { AnimatePresence, motion } from "motion/react";
 
 import ModalShell from "./ModalShell";
 
+import useBodyScrollLock from "../../hooks/useBodyScrollLock";
+
 /* =========================================================
    MONEY
 ========================================================= */
@@ -549,6 +551,8 @@ function DestinationCardPicker({
 }) {
   const selectionModalRef = useRef(null);
 
+  useBodyScrollLock(open);
+
   /* =======================================================
      ESCAPE
   ======================================================= */
@@ -578,24 +582,6 @@ function DestinationCardPicker({
       document.removeEventListener("keydown", handleEscape, true);
     };
   }, [open, onClose]);
-
-  /* =======================================================
-     LOCK BODY
-  ======================================================= */
-
-  useEffect(() => {
-    if (!open || typeof document === "undefined") {
-      return undefined;
-    }
-
-    const previous = document.body.style.overflow;
-
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.body.style.overflow = previous;
-    };
-  }, [open]);
 
   /* =======================================================
      CARD SELECTION MODAL

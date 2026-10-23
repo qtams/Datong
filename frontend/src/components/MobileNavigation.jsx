@@ -10,6 +10,8 @@ import { useAuth } from "../auth/AuthContext";
 
 import { sidebarNavigation } from "../data/sidebarNavigation";
 
+import useBodyScrollLock from "../hooks/useBodyScrollLock";
+
 import { MobileNavigationSkeleton } from "./SkeletonLoader";
 
 /* =========================================================
@@ -207,6 +209,8 @@ function MobileNavigationContent() {
   const dragControls = useDragControls();
 
   const [moreOpen, setMoreOpen] = useState(false);
+
+  useBodyScrollLock(moreOpen);
 
   /* =======================================================
      MEMBER ACCOUNT
@@ -409,24 +413,6 @@ function MobileNavigationContent() {
       handleCloseMore();
     }
   };
-
-  /* =======================================================
-     BODY LOCK
-  ======================================================= */
-
-  useEffect(() => {
-    if (!moreOpen) {
-      return undefined;
-    }
-
-    const previousOverflow = document.body.style.overflow;
-
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [moreOpen]);
 
   /* =======================================================
      ESCAPE

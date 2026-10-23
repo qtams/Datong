@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { motion, useDragControls } from "motion/react";
+
+import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 
 /* =========================================================
    MODAL SHELL
@@ -24,6 +26,14 @@ export default function ModalShell({
   const dragControls = useDragControls();
 
   const [mobileSheetMode, setMobileSheetMode] = useState(false);
+
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useBodyScrollLock(true);
 
   /* =======================================================
      MOBILE MODE
@@ -58,28 +68,22 @@ export default function ModalShell({
   }, [mobileSheet]);
 
   /* =======================================================
-     ESCAPE + BODY SCROLL LOCK
+     ESCAPE
   ======================================================= */
 
   useEffect(() => {
     const handleEscape = (event) => {
       if (event.key === "Escape") {
-        onClose?.();
+        onCloseRef.current?.();
       }
     };
-
-    const previousOverflow = document.body.style.overflow;
-
-    document.body.style.overflow = "hidden";
 
     document.addEventListener("keydown", handleEscape);
 
     return () => {
       document.removeEventListener("keydown", handleEscape);
-
-      document.body.style.overflow = previousOverflow;
     };
-  }, [onClose]);
+  }, []);
 
   /* =======================================================
      DRAG CLOSE

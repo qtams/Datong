@@ -6,6 +6,8 @@ import { Check, ChevronDown, X } from "lucide-react";
 
 import { AnimatePresence, motion } from "motion/react";
 
+import useBodyScrollLock from "../../hooks/useBodyScrollLock";
+
 /* =========================================================
    CONFIG
 ========================================================= */
@@ -52,6 +54,8 @@ function ResponsiveSelect({
   const [open, setOpen] = useState(false);
 
   const [isMobile, setIsMobile] = useState(getInitialMobileState);
+
+  useBodyScrollLock(open && isMobile);
 
   const [position, setPosition] = useState({
     top: 0,
