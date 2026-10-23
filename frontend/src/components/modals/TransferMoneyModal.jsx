@@ -15,8 +15,6 @@ import { AnimatePresence, motion } from "motion/react";
 
 import ModalShell from "./ModalShell";
 
-import datongWallet from "../../assets/datong_wallet.webp";
-
 /* =========================================================
    MONEY
 ========================================================= */
@@ -92,7 +90,11 @@ function AccountOption({
 
   const isCash = account?.type === "cash";
 
-  const cardImage = isCash ? datongWallet : account?.image || "";
+  const cardImage = isCash ? "" : account?.image || "";
+
+  const displayName = isCash
+    ? "Cash"
+    : account?.name || "Account";
 
   const shownBalance = balanceOverride ?? account?.balance ?? 0;
 
@@ -102,9 +104,9 @@ function AccountOption({
 
         maskImage: `url("${cardImage}")`,
 
-        WebkitMaskSize: isCash ? "contain" : "cover",
+        WebkitMaskSize: "cover",
 
-        maskSize: isCash ? "contain" : "cover",
+        maskSize: "cover",
 
         WebkitMaskRepeat: "no-repeat",
 
@@ -184,7 +186,8 @@ function AccountOption({
 
             select-none
 
-            ${isCash ? "object-contain" : "rounded-[14px] object-cover"}
+            rounded-[14px]
+            object-cover
           `}
         />
       ) : (
@@ -197,26 +200,37 @@ function AccountOption({
 
             rounded-[14px]
 
-            bg-gradient-to-br
-            from-gray-800
-            via-gray-900
-            to-black
+            bg-[#111111]
 
             text-white
           "
         >
           {isCash ? (
-            <Banknote
-              size={18}
-              strokeWidth={1.4}
+            <span
               className="
                 absolute
                 left-[8%]
                 top-[12%]
 
+                flex
+                h-8
+                w-8
+                items-center
+                justify-center
+
+                rounded-lg
+                border
+                border-white/15
+                bg-white/[0.06]
+
                 text-white/80
               "
-            />
+            >
+              <Banknote
+                size={15}
+                strokeWidth={1.4}
+              />
+            </span>
           ) : (
             <WalletCards
               size={18}
@@ -272,7 +286,7 @@ function AccountOption({
 
           sm:bottom-[10%]
 
-          ${isCash ? "left-[14%]" : "left-[7%]"}
+          left-[7%]
         `}
       >
         <p
@@ -293,7 +307,7 @@ function AccountOption({
             sm:tracking-[0.12em]
           "
         >
-          {account?.name || "Account"}
+          {displayName}
         </p>
 
         <motion.p
@@ -1853,11 +1867,22 @@ function TransferMoneyModal({
 
               <input
                 id="transfer-amount"
-                type="text"
+                type="number"
                 inputMode="decimal"
+                min="0"
+                step="0.01"
                 autoComplete="off"
                 value={amount}
                 disabled={!canEnterAmount}
+                onKeyDown={(event) => {
+                  if (
+                    ["e", "E", "+", "-"].includes(
+                      event.key,
+                    )
+                  ) {
+                    event.preventDefault();
+                  }
+                }}
                 onChange={(event) => {
                   const next = normalizeMoneyInput(event.target.value);
 

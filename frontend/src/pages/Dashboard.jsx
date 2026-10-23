@@ -16,6 +16,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -463,6 +464,23 @@ function MemberCard({
     provider?.name ||
     "Savings";
 
+  const [loadedImageSrc, setLoadedImageSrc] =
+    useState("");
+
+  const [failedImageSrc, setFailedImageSrc] =
+    useState("");
+
+  const imageLoaded =
+    Boolean(image) &&
+    loadedImageSrc === image;
+
+  const imageFailed =
+    Boolean(image) &&
+    failedImageSrc === image;
+
+  const artworkReady =
+    !image || imageLoaded || imageFailed;
+
   return (
     <button
       type="button"
@@ -493,61 +511,89 @@ function MemberCard({
       {/* IMAGE */}
 
       <span className="flex h-full w-full items-center justify-center">
-        {image ? (
-          <img
-            src={image}
-            alt={`${provider?.name || cardName} ${
-              portraitMode ? "portrait" : "landscape"
-            }`}
-            className={`
-              w-full
-              rounded-[18px]
-              ${
-                portraitMode
-                  ? "h-[91.5%] object-cover"
-                  : "h-full object-contain"
-              }
-            `}
-          />
-        ) : (
-          <span className="flex h-full w-full items-center justify-center text-gray-300">
-            <CreditCard size={40} strokeWidth={1.25} />
-          </span>
-        )}
+        <span
+          className={`
+            relative
+            flex
+            w-full
+            items-center
+            justify-center
+            overflow-hidden
+            rounded-[18px]
+            ${portraitMode ? "h-[91.5%]" : "h-full"}
+          `}
+        >
+          {image && !imageFailed ? (
+            <>
+              {!imageLoaded && (
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-0 animate-pulse bg-gradient-to-br from-gray-100 via-gray-200 to-gray-300"
+                />
+              )}
+
+              <img
+                key={image}
+                src={image}
+                alt={`${provider?.name || cardName} ${
+                  portraitMode ? "portrait" : "landscape"
+                }`}
+                onLoad={() => {
+                  setLoadedImageSrc(image);
+                }}
+                onError={() => {
+                  setFailedImageSrc(image);
+                }}
+                className={`
+                  h-full
+                  w-full
+                  ${portraitMode ? "object-cover" : "object-contain"}
+                  ${imageLoaded ? "visible" : "invisible"}
+                `}
+              />
+            </>
+          ) : (
+            <span className="flex h-full w-full items-center justify-center bg-gray-900 text-gray-300">
+              <CreditCard size={40} strokeWidth={1.25} />
+            </span>
+          )}
+        </span>
       </span>
 
       {/* AMOUNT */}
 
-      <span
-        className={`
-          absolute
-          z-10
-          flex
-          max-w-[72%]
-          flex-col
-          items-start
-          text-left
-          text-white
-          [text-shadow:0_1px_3px_rgba(0,0,0,0.75)]
-          ${portraitMode ? "bottom-[12%] left-[10%]" : "bottom-[9%] left-[8%]"}
-        `}
-      >
-        <span className="max-w-full truncate text-[9px] font-medium leading-none text-white/85 sm:text-[10px]">
-          {cardName}
-        </span>
-
+      {artworkReady && (
         <span
           className={`
-            mt-1
-            font-bold
-            leading-none
-            tracking-[-0.025em]
-            ${portraitMode ? "text-[13px] sm:text-[14px]" : "text-[14px] sm:text-[16px]"}
+            absolute
+            z-10
+            flex
+            max-w-[72%]
+            flex-col
+            items-start
+            text-left
+            text-white
+            [text-shadow:0_1px_3px_rgba(0,0,0,0.75)]
+            ${portraitMode ? "bottom-[12%] left-[10%]" : "bottom-[9%] left-[8%]"}
           `}
         >
-          {formatPeso(card?.balance)}
+          <span className="max-w-full truncate text-[9px] font-medium leading-none text-white/85 sm:text-[10px]">
+            {cardName}
+          </span>
+
+          <span
+            className={`
+              mt-1
+              font-bold
+              leading-none
+              tracking-[-0.025em]
+              ${portraitMode ? "text-[13px] sm:text-[14px]" : "text-[14px] sm:text-[16px]"}
+            `}
+          >
+            {formatPeso(card?.balance)}
+          </span>
         </span>
-      </span>
+      )}
     </button>
   );
 }
@@ -560,6 +606,7 @@ function MobileCardStack({
   cards,
   viewMode,
   activeIndex,
+  isSwitching,
   onAdvance,
   onViewAll,
 }) {
@@ -591,9 +638,52 @@ function MobileCardStack({
       : "min(84vw, 340px)",
   };
 
+  if (isSwitching) {
+    return (
+      <div
+        className="relative mx-auto w-fit lg:hidden"
+        style={{
+          paddingTop:
+            layerOffset *
+            Math.max(visibleCount - 1, 0),
+        }}
+        role="status"
+        aria-live="polite"
+        aria-label={`Loading ${portraitMode ? "portrait" : "landscape"} card view`}
+      >
+        <div
+          aria-hidden="true"
+          className="invisible pointer-events-none"
+          style={cardSize}
+        />
+
+        {Array.from(
+          { length: visibleCount },
+          (_, layerIndex) => (
+            <div
+              key={layerIndex}
+              aria-hidden="true"
+              className="absolute left-0 overflow-hidden rounded-[18px] bg-gray-200"
+              style={{
+                ...cardSize,
+                top:
+                  layerOffset *
+                  layerIndex,
+                zIndex: layerIndex + 1,
+                filter: `brightness(${0.84 + layerIndex * 0.05})`,
+              }}
+            >
+              <div className="h-full w-full animate-pulse bg-gradient-to-br from-gray-100 via-gray-200 to-gray-300" />
+            </div>
+          ),
+        )}
+      </div>
+    );
+  }
+
   return (
     <div
-      className="relative mx-auto w-fit transition-[width,height] duration-300 lg:hidden"
+      className="relative mx-auto w-fit lg:hidden"
       style={{
         paddingTop:
           layerOffset *
@@ -679,6 +769,11 @@ function CardsSection({
   const [viewMode, setViewMode] =
     useState("landscape");
 
+  const [isSwitchingView, setIsSwitchingView] =
+    useState(false);
+
+  const viewSwitchTimeoutRef = useRef(null);
+
   const [activeCardIndex, setActiveCardIndex] =
     useState(0);
 
@@ -696,6 +791,37 @@ function CardsSection({
           : 0,
     );
   };
+
+  const handleViewModeChange = (nextViewMode) => {
+    if (nextViewMode === viewMode) {
+      return;
+    }
+
+    if (viewSwitchTimeoutRef.current) {
+      window.clearTimeout(
+        viewSwitchTimeoutRef.current,
+      );
+    }
+
+    setViewMode(nextViewMode);
+    setIsSwitchingView(true);
+
+    viewSwitchTimeoutRef.current =
+      window.setTimeout(() => {
+        setIsSwitchingView(false);
+        viewSwitchTimeoutRef.current = null;
+      }, 300);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (viewSwitchTimeoutRef.current) {
+        window.clearTimeout(
+          viewSwitchTimeoutRef.current,
+        );
+      }
+    };
+  }, []);
 
   return (
     <section>
@@ -721,7 +847,7 @@ function CardsSection({
         <div className="flex items-center gap-2">
           <CardViewSwitcher
             value={viewMode}
-            onChange={setViewMode}
+            onChange={handleViewModeChange}
           />
 
           <button
@@ -756,6 +882,9 @@ function CardsSection({
             viewMode={viewMode}
             activeIndex={
               normalizedActiveIndex
+            }
+            isSwitching={
+              isSwitchingView
             }
             onAdvance={
               handleAdvanceCard

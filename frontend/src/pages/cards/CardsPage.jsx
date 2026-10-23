@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -12,7 +13,6 @@ import {
   Eye,
   EyeOff,
   LayoutGrid,
-  List,
   LoaderCircle,
   Plus,
   Trash2,
@@ -188,11 +188,6 @@ const VIEW_MODES = [
     id: "stack",
     label: "Large",
     icon: WalletCards,
-  },
-  {
-    id: "list",
-    label: "List",
-    icon: List,
   },
 ];
 
@@ -560,7 +555,14 @@ function getCardClassName(viewMode) {
    - keeps the ReactBits reflection / glare
 ========================================================= */
 
-function ReflectiveBankImage({ image, alt }) {
+function ReflectiveBankImage({
+  image,
+  alt,
+  loaded = false,
+  failed = false,
+  onLoad,
+  onError,
+}) {
   return (
     <ReflectiveCard
       width="100%"
@@ -596,13 +598,33 @@ function ReflectiveBankImage({ image, alt }) {
       }}
     >
       <div className="relative h-full w-full overflow-hidden rounded-[18px] bg-transparent">
-        {image ? (
-          <img
-            src={image}
-            alt={alt}
-            draggable={false}
-            className="absolute inset-0 h-full w-full select-none object-cover"
-          />
+        {image && !failed ? (
+          <>
+            {!loaded && (
+              <div
+                aria-hidden="true"
+                className="absolute inset-0 animate-pulse bg-gradient-to-br from-gray-100 via-gray-200 to-gray-300"
+              />
+            )}
+
+            <img
+              key={image}
+              src={image}
+              alt={alt}
+              draggable={false}
+              onLoad={onLoad}
+              onError={onError}
+              className={`
+                absolute
+                inset-0
+                h-full
+                w-full
+                select-none
+                object-cover
+                ${loaded ? "visible" : "invisible"}
+              `}
+            />
+          </>
         ) : (
           <div className="absolute inset-0 flex items-center justify-center rounded-[18px] bg-[#151515] text-white/60">
             <CreditCard size={26} strokeWidth={1.4} />
@@ -644,14 +666,53 @@ function SavingsCard({
   const name = account?.name || provider?.name || "Savings";
   const amount = account?.balance || "0.00";
 
+  const [imageStatus, setImageStatus] =
+    useState({});
+
+  const setArtworkStatus = (
+    source,
+    status,
+  ) => {
+    if (!source) {
+      return;
+    }
+
+    setImageStatus((current) => {
+      if (current[source] === status) {
+        return current;
+      }
+
+      return {
+        ...current,
+        [source]: status,
+      };
+    });
+  };
+
+  const mobileImageStatus =
+    imageStatus[mobileImage];
+
+  const landscapeImageStatus =
+    imageStatus[landscapeImage];
+
+  const mobileArtworkReady =
+    !mobileImage ||
+    mobileImageStatus === "loaded" ||
+    mobileImageStatus === "failed";
+
+  const landscapeArtworkReady =
+    !landscapeImage ||
+    landscapeImageStatus === "loaded" ||
+    landscapeImageStatus === "failed";
+
+  const artworkReady =
+    mobileArtworkReady &&
+    landscapeArtworkReady;
+
   return (
     <motion.div
-      layout
-      initial={{ opacity: 0, y: 8, scale: 0.98 }}
       animate={{
         opacity: removing ? 0.45 : 1,
-        y: 0,
-        scale: 1,
       }}
       exit={{ opacity: 0, scale: 0.96 }}
       transition={{ duration: 0.18, ease: "easeOut" }}
@@ -682,6 +743,26 @@ function SavingsCard({
         <ReflectiveBankImage
           image={mobileImage}
           alt={`${name} ${portraitMode ? "portrait" : "landscape"}`}
+          loaded={
+            mobileImageStatus ===
+            "loaded"
+          }
+          failed={
+            mobileImageStatus ===
+            "failed"
+          }
+          onLoad={() =>
+            setArtworkStatus(
+              mobileImage,
+              "loaded",
+            )
+          }
+          onError={() =>
+            setArtworkStatus(
+              mobileImage,
+              "failed",
+            )
+          }
         />
       </div>
 
@@ -690,46 +771,68 @@ function SavingsCard({
         <ReflectiveBankImage
           image={landscapeImage}
           alt={`${name} landscape`}
+          loaded={
+            landscapeImageStatus ===
+            "loaded"
+          }
+          failed={
+            landscapeImageStatus ===
+            "failed"
+          }
+          onLoad={() =>
+            setArtworkStatus(
+              landscapeImage,
+              "loaded",
+            )
+          }
+          onError={() =>
+            setArtworkStatus(
+              landscapeImage,
+              "failed",
+            )
+          }
         />
       </div>
 
       {/* NAME + MONEY ONLY. NO GRADIENT / NO BACKGROUND. */}
-      <div
-        className={`
-          pointer-events-none
-          absolute
-          left-[7%]
-          z-20
-          max-w-[78%]
-          ${portraitMode ? "bottom-[12%]" : "bottom-[7%]"}
-        `}
-      >
-        <p
-          className="
-            truncate
-            text-[9px]
-            font-medium
-            text-white
-            [text-shadow:0_1px_4px_rgba(0,0,0,0.95)]
-          "
+      {artworkReady && (
+        <div
+          className={`
+            pointer-events-none
+            absolute
+            left-[7%]
+            z-20
+            max-w-[78%]
+            ${portraitMode ? "bottom-[12%]" : "bottom-[7%]"}
+          `}
         >
-          {name}
-        </p>
+          <p
+            className="
+              truncate
+              text-[9px]
+              font-medium
+              text-white
+              [text-shadow:0_1px_4px_rgba(0,0,0,0.95)]
+            "
+          >
+            {name}
+          </p>
 
-        <p
-          className="
-            mt-0.5
-            truncate
-            text-[13px]
-            font-bold
-            tracking-[-0.02em]
-            text-white
-            [text-shadow:0_1px_5px_rgba(0,0,0,1)]
-          "
-        >
-          {displayMoney(amount, hidden)}
-        </p>
-      </div>
+          <p
+            className="
+              mt-0.5
+              truncate
+              text-[13px]
+              font-bold
+              tracking-[-0.02em]
+              text-white
+              [text-shadow:0_1px_5px_rgba(0,0,0,1)]
+            "
+          >
+            {displayMoney(amount, hidden)}
+          </p>
+        </div>
+      )}
 
       <button
         type="button"
@@ -749,7 +852,7 @@ function SavingsCard({
         }}
         aria-label={`Remove ${name}`}
         title={`Remove ${name}`}
-        className="
+        className={`
           absolute
           right-2
           top-2
@@ -768,7 +871,8 @@ function SavingsCard({
           disabled:cursor-not-allowed
           sm:opacity-0
           sm:group-hover:opacity-100
-        "
+          ${artworkReady ? "" : "invisible"}
+        `}
       >
         {removing ? (
           <LoaderCircle size={11} className="animate-spin" />
@@ -799,21 +903,6 @@ function CashCard({
 }) {
   return (
     <motion.div
-      layout
-      initial={{
-        opacity: 0,
-        y: 8,
-        scale: 0.98,
-      }}
-      animate={{
-        opacity: 1,
-        y: 0,
-        scale: 1,
-      }}
-      transition={{
-        duration: 0.18,
-        ease: "easeOut",
-      }}
       className={`
         group
         relative
@@ -1242,6 +1331,44 @@ function AccountLayout({ mode, children }) {
   );
 }
 
+function AccountCardSkeleton({
+  viewMode,
+}) {
+  const portraitMode =
+    viewMode === "portrait";
+
+  return (
+    <div
+      aria-hidden="true"
+      className={`
+        overflow-hidden
+        rounded-[18px]
+        bg-gray-200
+        ${portraitMode ? "aspect-[0.64/1]" : "aspect-[1.586/1]"}
+        sm:aspect-[1.586/1]
+        ${getCardClassName(viewMode)}
+      `}
+    >
+      <div className="h-full w-full animate-pulse bg-gradient-to-br from-gray-100 via-gray-200 to-gray-300" />
+    </div>
+  );
+}
+
+function AccountSkeletonItems({
+  viewMode,
+  count,
+}) {
+  return Array.from(
+    { length: Math.max(1, count) },
+    (_, index) => (
+      <AccountCardSkeleton
+        key={index}
+        viewMode={viewMode}
+      />
+    ),
+  );
+}
+
 /* =========================================================
    SKELETON
 ========================================================= */
@@ -1490,6 +1617,42 @@ function CardsPage({
   ======================================================= */
 
   const [viewMode, setViewMode] = useState("cards");
+
+  const [isSwitchingView, setIsSwitchingView] =
+    useState(false);
+
+  const viewSwitchTimeoutRef = useRef(null);
+
+  const handleViewModeChange = (nextViewMode) => {
+    if (nextViewMode === viewMode) {
+      return;
+    }
+
+    if (viewSwitchTimeoutRef.current) {
+      window.clearTimeout(
+        viewSwitchTimeoutRef.current,
+      );
+    }
+
+    setViewMode(nextViewMode);
+    setIsSwitchingView(true);
+
+    viewSwitchTimeoutRef.current =
+      window.setTimeout(() => {
+        setIsSwitchingView(false);
+        viewSwitchTimeoutRef.current = null;
+      }, 300);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (viewSwitchTimeoutRef.current) {
+        window.clearTimeout(
+          viewSwitchTimeoutRef.current,
+        );
+      }
+    };
+  }, []);
 
   const [
     hideBalances,
@@ -2129,7 +2292,7 @@ function CardsPage({
 
             <ViewSwitcher
               value={viewMode}
-              onChange={setViewMode}
+              onChange={handleViewModeChange}
             />
           </div>
 
@@ -2145,76 +2308,89 @@ function CardsPage({
               viewMode
             }
           >
-            {/* CASH */}
+            {isSwitchingView ? (
+              <AccountSkeletonItems
+                viewMode={viewMode}
+                count={Math.min(
+                  cashCards.length +
+                    1,
+                  4,
+                )}
+              />
+            ) : (
+              <>
+                {/* CASH */}
 
-            <CashCard
-              balance={
-                summary
-                  ?.actual_money ||
-                0
-              }
-              hidden={
-                hideBalances
-              }
-              viewMode={
-                viewMode
-              }
-              onEdit={() =>
-                setWalletModalOpen(
-                  true,
-                )
-              }
-              onTransfer={
-                handleOpenWalletTransfer
-              }
-            />
+                <CashCard
+                  balance={
+                    summary
+                      ?.actual_money ||
+                    0
+                  }
+                  hidden={
+                    hideBalances
+                  }
+                  viewMode={
+                    viewMode
+                  }
+                  onEdit={() =>
+                    setWalletModalOpen(
+                      true,
+                    )
+                  }
+                  onTransfer={
+                    handleOpenWalletTransfer
+                  }
+                />
 
-            {/* BANK / E-WALLET */}
+                {/* BANK / E-WALLET */}
 
-            <AnimatePresence
-              mode="popLayout"
-            >
-              {cashCards.map(
-                (account) => (
-                  <SavingsCard
-                    key={
-                      account.id
-                    }
-                    account={
-                      account
-                    }
-                    hidden={
-                      hideBalances
-                    }
+                <AnimatePresence
+                  mode="popLayout"
+                >
+                  {cashCards.map(
+                    (account) => (
+                      <SavingsCard
+                        key={
+                          account.id
+                        }
+                        account={
+                          account
+                        }
+                        hidden={
+                          hideBalances
+                        }
+                        viewMode={
+                          viewMode
+                        }
+                        removing={
+                          removingId ===
+                          account.id
+                        }
+                        onTransfer={
+                          handleOpenTransfer
+                        }
+                        onRemove={
+                          handleRemoveCard
+                        }
+                      />
+                    ),
+                  )}
+                </AnimatePresence>
+
+                {/* ADD */}
+
+                {canAddCard && (
+                  <AddCardSlot
                     viewMode={
                       viewMode
                     }
-                    removing={
-                      removingId ===
-                      account.id
-                    }
-                    onTransfer={
-                      handleOpenTransfer
-                    }
-                    onRemove={
-                      handleRemoveCard
+                    onClick={
+                      handleOpenAdd
                     }
                   />
-                ),
-              )}
-            </AnimatePresence>
-
-            {/* ADD */}
-
-            {canAddCard && (
-              <AddCardSlot
-                viewMode={
-                  viewMode
-                }
-                onClick={
-                  handleOpenAdd
-                }
-              />
+                )}
+              </>
             )}
           </AccountLayout>
         </section>
@@ -2282,38 +2458,48 @@ function CardsPage({
                 viewMode
               }
             >
-              <AnimatePresence
-                mode="popLayout"
-              >
-                {creditCards.map(
-                  (account) => (
-                    <SavingsCard
-                      key={
-                        account.id
-                      }
-                      account={
-                        account
-                      }
-                      hidden={
-                        hideBalances
-                      }
-                      viewMode={
-                        viewMode
-                      }
-                      removing={
-                        removingId ===
-                        account.id
-                      }
-                      onTransfer={
-                        handleOpenTransfer
-                      }
-                      onRemove={
-                        handleRemoveCard
-                      }
-                    />
-                  ),
-                )}
-              </AnimatePresence>
+              {isSwitchingView ? (
+                <AccountSkeletonItems
+                  viewMode={viewMode}
+                  count={Math.min(
+                    creditCards.length,
+                    4,
+                  )}
+                />
+              ) : (
+                <AnimatePresence
+                  mode="popLayout"
+                >
+                  {creditCards.map(
+                    (account) => (
+                      <SavingsCard
+                        key={
+                          account.id
+                        }
+                        account={
+                          account
+                        }
+                        hidden={
+                          hideBalances
+                        }
+                        viewMode={
+                          viewMode
+                        }
+                        removing={
+                          removingId ===
+                          account.id
+                        }
+                        onTransfer={
+                          handleOpenTransfer
+                        }
+                        onRemove={
+                          handleRemoveCard
+                        }
+                      />
+                    ),
+                  )}
+                </AnimatePresence>
+              )}
             </AccountLayout>
           </section>
         )}

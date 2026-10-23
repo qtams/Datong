@@ -1431,9 +1431,20 @@ function AddMemberCardModal({
 
                     <input
                       id="member-card-amount"
-                      type="text"
+                      type="number"
                       inputMode="decimal"
+                      min="0"
+                      step="0.01"
                       value={amount}
+                      onKeyDown={(event) => {
+                        if (
+                          ["e", "E", "+", "-"].includes(
+                            event.key,
+                          )
+                        ) {
+                          event.preventDefault();
+                        }
+                      }}
                       onChange={(event) => {
                         setAmount(normalizeMoneyInput(event.target.value));
 
