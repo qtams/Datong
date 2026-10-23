@@ -102,8 +102,12 @@ function MemberDashboardLoading() {
         {[1, 2, 3].map((item) => (
           <div
             key={item}
-            className="h-[104px] rounded-[20px] bg-gray-200 sm:h-[112px]"
-          />
+            className="flex h-[92px] flex-col items-center justify-center gap-2.5"
+          >
+            <div className="h-14 w-14 rounded-full bg-gray-200 sm:h-[60px] sm:w-[60px]" />
+
+            <div className="h-2.5 w-16 rounded bg-gray-200" />
+          </div>
         ))}
       </div>
 
@@ -124,10 +128,18 @@ function MemberDashboardLoading() {
           </div>
         </div>
 
-        <div className="flex gap-3 overflow-hidden">
-          <div className="aspect-[1.65/1] w-[84vw] max-w-[340px] shrink-0 rounded-[18px] bg-gray-200 sm:w-[330px]" />
+        <div className="relative mx-auto w-fit pt-[22px] lg:hidden">
+          <div className="absolute left-0 top-0 z-0 aspect-[1.65/1] w-[84vw] max-w-[340px] rounded-[18px] bg-gray-300" />
 
-          <div className="aspect-[1.65/1] w-[84vw] max-w-[340px] shrink-0 rounded-[18px] bg-gray-200 sm:w-[330px]" />
+          <div className="absolute left-0 top-[11px] z-[1] aspect-[1.65/1] w-[84vw] max-w-[340px] rounded-[18px] bg-gray-200" />
+
+          <div className="relative z-10 aspect-[1.65/1] w-[84vw] max-w-[340px] shrink-0 rounded-[18px] bg-gray-100 sm:w-[330px]" />
+        </div>
+
+        <div className="hidden gap-3 overflow-hidden lg:flex">
+          <div className="aspect-[1.65/1] w-[340px] shrink-0 rounded-[18px] bg-gray-200" />
+
+          <div className="aspect-[1.65/1] w-[340px] shrink-0 rounded-[18px] bg-gray-200" />
         </div>
       </div>
 
@@ -266,7 +278,7 @@ function QuickActions({ onNavigate, onWallet }) {
   return (
     <section
       aria-label="Quick actions"
-      className="grid grid-cols-3 gap-2 sm:gap-3"
+      className="grid grid-cols-3 gap-3 py-1 sm:gap-5"
     >
       {actions.map(({ label, icon: Icon, onClick }) => (
         <button
@@ -276,52 +288,49 @@ function QuickActions({ onNavigate, onWallet }) {
           className="
             group
             flex
-            h-[104px]
+            min-w-0
             flex-col
             items-center
             justify-center
             gap-2.5
-            rounded-[20px]
-            border
-            border-gray-200/90
-            bg-white
-            p-3
+            bg-transparent
+            px-1
+            py-1.5
             text-center
-            shadow-[0_4px_14px_rgba(15,23,42,0.05)]
-            transition-all
-            duration-200
-            hover:-translate-y-1
-            hover:border-gray-300/90
-            hover:shadow-[0_10px_24px_rgba(15,23,42,0.09)]
             focus-visible:outline-none
             focus-visible:ring-2
-            focus-visible:ring-black/15
-            active:translate-y-0
-            active:scale-[0.98]
-            sm:h-[112px]
-            sm:p-4
+            focus-visible:ring-black/30
+            focus-visible:ring-offset-2
           "
         >
           <span
             className="
               flex
-              h-9
-              w-9
+              h-14
+              w-14
               shrink-0
               items-center
               justify-center
               rounded-full
-              bg-gray-100/90
-              text-gray-700
-              transition-colors
+              bg-black
+              text-white
+              shadow-[0_8px_18px_rgba(0,0,0,0.2)]
+              transition-all
+              duration-200
+              group-hover:-translate-y-0.5
               group-hover:bg-black
               group-hover:text-white
+              group-hover:shadow-[0_12px_24px_rgba(0,0,0,0.26)]
+              group-active:translate-y-0
+              group-active:scale-95
+              sm:h-[60px]
+              sm:w-[60px]
             "
           >
-            <Icon size={16} strokeWidth={1.7} />
+            <Icon size={22} strokeWidth={1.8} />
           </span>
 
-          <span className="flex min-h-8 items-center justify-center text-[10px] font-semibold leading-[1.25] text-gray-900 sm:text-[11px]">
+          <span className="flex min-h-7 max-w-full items-center justify-center text-[11px] font-medium leading-[1.2] text-gray-900 sm:text-[12px]">
             {label}
           </span>
         </button>
@@ -426,6 +435,8 @@ function MemberCard({
   card,
   viewMode,
   onClick,
+  actionLabel,
+  tabIndex = 0,
 }) {
   const provider =
     card?.provider || {};
@@ -456,7 +467,11 @@ function MemberCard({
     <button
       type="button"
       onClick={onClick}
-      aria-label={`${cardName}, ${formatPeso(card?.balance)}`}
+      aria-label={
+        actionLabel ||
+        `${cardName}, ${formatPeso(card?.balance)}`
+      }
+      tabIndex={tabIndex}
       className="
         group
         relative
@@ -538,6 +553,122 @@ function MemberCard({
 }
 
 /* =========================================================
+   MOBILE CARD STACK
+========================================================= */
+
+function MobileCardStack({
+  cards,
+  viewMode,
+  activeIndex,
+  onAdvance,
+  onViewAll,
+}) {
+  const portraitMode =
+    viewMode === "portrait";
+
+  const visibleCount = Math.min(
+    cards.length,
+    4,
+  );
+
+  const orderedCards = Array.from(
+    { length: visibleCount },
+    (_, depth) =>
+      cards[
+        (activeIndex + depth) %
+          cards.length
+      ],
+  );
+
+  const layerOffset = 11;
+
+  const cardSize = {
+    aspectRatio: portraitMode
+      ? "0.64 / 1"
+      : "1.65 / 1",
+    width: portraitMode
+      ? "min(54vw, 205px)"
+      : "min(84vw, 340px)",
+  };
+
+  return (
+    <div
+      className="relative mx-auto w-fit transition-[width,height] duration-300 lg:hidden"
+      style={{
+        paddingTop:
+          layerOffset *
+          Math.max(visibleCount - 1, 0),
+      }}
+      role="group"
+      aria-label={`${cards.length} card accounts. Click the front card to show the next card.`}
+    >
+      <div
+        aria-hidden="true"
+        className="invisible pointer-events-none"
+        style={cardSize}
+      />
+
+      {orderedCards
+        .slice()
+        .reverse()
+        .map((card, reversedIndex) => {
+          const depth =
+            visibleCount -
+            reversedIndex -
+            1;
+
+          const front = depth === 0;
+
+          return (
+            <div
+              key={card.id}
+              className="absolute transition-all duration-300 ease-out"
+              style={{
+                left: 0,
+                top:
+                  layerOffset *
+                  (visibleCount -
+                    depth -
+                    1),
+                zIndex:
+                  visibleCount - depth,
+                filter: front
+                  ? "none"
+                  : `brightness(${Math.max(0.72, 0.94 - depth * 0.07)})`,
+                pointerEvents: front
+                  ? "auto"
+                  : "none",
+              }}
+            >
+              <MemberCard
+                card={card}
+                viewMode={viewMode}
+                onClick={
+                  cards.length > 1
+                    ? onAdvance
+                    : onViewAll
+                }
+                actionLabel={`${
+                  card?.name ||
+                  card?.provider?.name ||
+                  "Card"
+                }, ${formatPeso(
+                  card?.balance,
+                )}. ${
+                  cards.length > 1
+                    ? "Show next card"
+                    : "View card"
+                }`}
+                tabIndex={front ? 0 : -1}
+              />
+            </div>
+          );
+        })}
+    </div>
+  );
+}
+
+/* =========================================================
    CARDS SECTION
 ========================================================= */
 
@@ -547,6 +678,24 @@ function CardsSection({
 }) {
   const [viewMode, setViewMode] =
     useState("landscape");
+
+  const [activeCardIndex, setActiveCardIndex] =
+    useState(0);
+
+  const normalizedActiveIndex =
+    cards.length > 0
+      ? activeCardIndex % cards.length
+      : 0;
+
+  const handleAdvanceCard = () => {
+    setActiveCardIndex(
+      (current) =>
+        cards.length > 0
+          ? (current + 1) %
+            cards.length
+          : 0,
+    );
+  };
 
   return (
     <section>
@@ -599,31 +748,46 @@ function CardsSection({
       {/* CARDS */}
 
       {cards.length > 0 ? (
-        <div
-          className="
-            -mx-4
-            flex
-            snap-x
-            snap-mandatory
-            gap-3
-            overflow-x-auto
-            px-4
-            pb-2
-            sm:mx-0
-            sm:px-0
-            [scrollbar-width:none]
-            [&::-webkit-scrollbar]:hidden
-          "
-        >
-          {cards.map((card) => (
-            <MemberCard
-              key={card.id}
-              card={card}
-              viewMode={viewMode}
-              onClick={onViewAll}
-            />
-          ))}
-        </div>
+        <>
+          {/* MOBILE / TABLET: CLICKABLE STACK */}
+
+          <MobileCardStack
+            cards={cards}
+            viewMode={viewMode}
+            activeIndex={
+              normalizedActiveIndex
+            }
+            onAdvance={
+              handleAdvanceCard
+            }
+            onViewAll={onViewAll}
+          />
+
+          {/* DESKTOP: ORIGINAL HORIZONTAL CARDS */}
+
+          <div
+            className="
+              hidden
+              snap-x
+              snap-mandatory
+              gap-3
+              overflow-x-auto
+              pb-2
+              lg:flex
+              [scrollbar-width:none]
+              [&::-webkit-scrollbar]:hidden
+            "
+          >
+            {cards.map((card) => (
+              <MemberCard
+                key={card.id}
+                card={card}
+                viewMode={viewMode}
+                onClick={onViewAll}
+              />
+            ))}
+          </div>
+        </>
       ) : (
         <button
           type="button"
