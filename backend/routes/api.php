@@ -6,11 +6,10 @@ use App\Http\Controllers\Api\MemberAuthController;
 use App\Http\Controllers\Api\MemberCardController;
 use App\Http\Controllers\Api\MemberController;
 use App\Http\Controllers\Api\MemberFinanceController;
+use App\Http\Controllers\Api\MemberSavingsGoalController;
 use App\Http\Controllers\Api\MemberTransferController;
 use App\Http\Controllers\Api\UserController;
-
 use App\Http\Middleware\ResolveFirebaseMember;
-
 use Illuminate\Support\Facades\Route;
 
 /* =========================================================
@@ -65,6 +64,14 @@ Route::middleware(
 )
     ->prefix('member-finance')
     ->group(function () {
+        Route::get('/savings-goals', [MemberSavingsGoalController::class, 'index']);
+        Route::post('/savings-goals', [MemberSavingsGoalController::class, 'store']);
+        Route::get('/savings-goals/{savingsGoalId}/entries', [MemberSavingsGoalController::class, 'entries'])->whereNumber('savingsGoalId');
+        Route::post('/savings-goals/{savingsGoalId}/transfers', [MemberSavingsGoalController::class, 'transfer'])->whereNumber('savingsGoalId');
+        Route::get('/savings-goals/{savingsGoalId}', [MemberSavingsGoalController::class, 'show'])->whereNumber('savingsGoalId');
+        Route::put('/savings-goals/{savingsGoalId}', [MemberSavingsGoalController::class, 'update'])->whereNumber('savingsGoalId');
+        Route::delete('/savings-goals/{savingsGoalId}', [MemberSavingsGoalController::class, 'destroy'])->whereNumber('savingsGoalId');
+
         /* =================================================
            SUMMARY
 

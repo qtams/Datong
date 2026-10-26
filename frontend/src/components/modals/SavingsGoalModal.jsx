@@ -23,6 +23,8 @@ import {
 } from "motion/react";
 
 import ModalShell from "./ModalShell";
+import MoneyInput from "../forms/MoneyInput";
+import { moneyValue, normalizeMoneyInput } from "../../utils/moneyInput";
 
 import {
   getSavingsGoalIcon,
@@ -74,7 +76,8 @@ function createInitialForm(goal) {
     iconId: goal.iconId || "emergency",
     imageData:
       typeof goal.imageData === "string" &&
-      goal.imageData.startsWith("data:image/")
+      (goal.imageData.startsWith("data:image/") ||
+        goal.imageData.startsWith("https://"))
         ? goal.imageData
         : "",
     targetAmount: String(
@@ -85,38 +88,6 @@ function createInitialForm(goal) {
     ),
     targetDate: goal.targetDate || "",
   };
-}
-
-function normalizeMoneyInput(value) {
-  let cleaned = String(value || "").replace(
-    /[^\d.]/g,
-    "",
-  );
-
-  const parts = cleaned.split(".");
-
-  if (parts.length > 2) {
-    cleaned = `${parts.shift()}.${parts.join("")}`;
-  }
-
-  if (cleaned.includes(".")) {
-    const [whole, decimals = ""] =
-      cleaned.split(".");
-
-    cleaned = `${whole}.${decimals.slice(0, 2)}`;
-  }
-
-  return cleaned;
-}
-
-function preventInvalidMoneyKey(event) {
-  if (
-    ["e", "E", "+", "-"].includes(
-      event.key,
-    )
-  ) {
-    event.preventDefault();
-  }
 }
 
 function formatPeso(value) {
@@ -213,15 +184,15 @@ function resizeGoalPhoto(file) {
   });
 }
 
-function StepProgress({ currentStep }) {
+function StepProgress({ currentStep, stepIndexes = [0, 1, 2] }) {
   return (
     <div
       className="flex items-center gap-1.5"
-      aria-label={`Step ${currentStep + 1} of ${CREATION_STEPS.length}`}
+      aria-label={`Step ${stepIndexes.indexOf(currentStep) + 1} of ${stepIndexes.length}`}
     >
-      {CREATION_STEPS.map((step, index) => (
+      {stepIndexes.map((index) => (
         <span
-          key={step.id}
+          key={CREATION_STEPS[index].id}
           className={`h-1.5 rounded-full transition-all duration-200 ${
             index === currentStep
               ? "w-6 bg-black"
@@ -235,53 +206,6 @@ function StepProgress({ currentStep }) {
   );
 }
 
-function MoneyInput({
-  id,
-  value,
-  onChange,
-  placeholder,
-  autoFocus = false,
-  invalid = false,
-  danger = false,
-  describedBy,
-}) {
-  return (
-    <div
-      className={`mx-auto flex max-w-[430px] items-center justify-center border-b-2 px-2 pb-3 transition-colors ${
-        invalid || danger
-          ? "border-red-400"
-          : "border-gray-200 focus-within:border-black"
-      }`}
-    >
-      <span className="mr-2 text-[30px] font-semibold tracking-[-0.04em] text-gray-400 sm:text-[36px]">
-        {"\u20B1"}
-      </span>
-
-      <input
-        id={id}
-        type="number"
-        inputMode="decimal"
-        min="0"
-        step="0.01"
-        value={value}
-        autoFocus={autoFocus}
-        onKeyDown={preventInvalidMoneyKey}
-        onChange={(event) =>
-          onChange(event.target.value)
-        }
-        placeholder={placeholder}
-        aria-invalid={invalid}
-        aria-describedby={describedBy}
-        className={`min-w-0 max-w-[300px] flex-1 bg-transparent text-center text-[38px] font-semibold tracking-[-0.055em] outline-none placeholder:text-gray-300 sm:text-[46px] ${
-          invalid || danger
-            ? "text-red-600"
-            : "text-gray-950"
-        }`}
-      />
-    </div>
-  );
-}
-
 function SavingsGoalModal({
   open,
   goal = null,
@@ -289,11 +213,13 @@ function SavingsGoalModal({
   walletLoading = false,
   walletError = "",
   saving = false,
+  detailsOnly = false,
   onClose,
   onSave,
   onDelete,
 }) {
   const editing = Boolean(goal?.id);
+  const metadataOnly = editing && detailsOnly;
 
   const [form, setForm] = useState(
     () => createInitialForm(goal),
@@ -457,7 +383,7 @@ function SavingsGoalModal({
 
     setCurrentStep((value) =>
       Math.min(
-        value + 1,
+        metadataOnly ? 2 : value + 1,
         CREATION_STEPS.length - 1,
       ),
     );
@@ -480,7 +406,7 @@ function SavingsGoalModal({
 
     setErrors({});
     setCurrentStep((value) =>
-      Math.max(0, value - 1),
+      metadataOnly ? 0 : Math.max(0, value - 1),
     );
   };
 
@@ -547,12 +473,8 @@ function SavingsGoalModal({
       name: form.name.trim(),
       iconId: form.iconId,
       imageData: form.imageData || "",
-      targetAmount: Number(
-        form.targetAmount,
-      ),
-      currentAmount: Number(
-        form.currentAmount || 0,
-      ),
+      targetAmount: moneyValue(form.targetAmount),
+      currentAmount: moneyValue(form.currentAmount),
       targetDate: form.targetDate || "",
     });
   };
@@ -620,6 +542,7 @@ function SavingsGoalModal({
             <div className="mt-3 flex justify-center">
               <StepProgress
                 currentStep={currentStep}
+                stepIndexes={metadataOnly ? [0, 2] : [0, 1, 2]}
               />
             </div>
           )}
@@ -1055,6 +978,7 @@ function SavingsGoalModal({
                   >
                     <MoneyInput
                       id="savings-goal-current"
+                      label="Starting amount"
                       value={form.currentAmount}
                       placeholder="0.00"
                       autoFocus
@@ -1120,6 +1044,7 @@ function SavingsGoalModal({
                   <div className="mt-9">
                     <MoneyInput
                       id="savings-goal-target"
+                      label="Saving target"
                       value={form.targetAmount}
                       placeholder="10,000.00"
                       autoFocus
@@ -1184,7 +1109,7 @@ function SavingsGoalModal({
 
               <footer className="mt-8 border-t border-gray-100 pt-4">
                 <div className="flex items-center gap-2">
-                  {editing &&
+                  {editing && !metadataOnly &&
                     currentStep === 2 && (
                       <button
                         type="button"

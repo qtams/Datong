@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\DecimalMoney;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -25,8 +26,7 @@ class MemberCashAccount extends Model
     protected function casts(): array
     {
         return [
-            'balance' =>
-                'decimal:2',
+            'balance' => DecimalMoney::class,
         ];
     }
 

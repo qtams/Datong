@@ -83,6 +83,9 @@ const ALL_NAVIGATION_ITEMS = sidebarNavigation.flatMap((group) =>
 ========================================================= */
 
 function pathMatches(pathname, item) {
+  if (item?.id === "savings-goals") {
+    return pathname === "/savings-goals" || pathname.startsWith("/savings-goals/");
+  }
   if (!item?.path) {
     return false;
   }

@@ -3,14 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-
 use App\Models\Card;
 use App\Models\Member;
 use App\Models\MemberCard;
 use App\Models\MemberCashAccount;
-
+use App\Models\MemberSavingsGoal;
 use App\Support\Money;
-
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -40,18 +38,14 @@ class MemberFinanceController extends Controller
     ): MemberCashAccount {
         return MemberCashAccount::firstOrCreate(
             [
-                'member_id' =>
-                    $member->id,
+                'member_id' => $member->id,
             ],
             [
-                'name' =>
-                    'On-hand Cash',
+                'name' => 'On-hand Cash',
 
-                'balance' =>
-                    '0.00',
+                'balance' => '0.00',
 
-                'currency' =>
-                    'PHP',
+                'currency' => 'PHP',
             ]
         );
     }
@@ -64,29 +58,24 @@ class MemberFinanceController extends Controller
         MemberCashAccount $cash
     ): array {
         return [
-            'id' =>
-                $cash->id,
+            'id' => $cash->id,
 
-            'name' =>
-                $cash->name,
+            'name' => $cash->name,
 
-            'balance' =>
-                (string) $cash->balance,
+            'balance' => (string) $cash->balance,
 
-            'currency' =>
-                $cash->currency,
+            'currency' => $cash->currency,
 
-            'updated_at' =>
-                $cash
-                    ->updated_at
-                    ?->toISOString(),
+            'updated_at' => $cash
+                ->updated_at
+                ?->toISOString(),
         ];
     }
 
     /* =========================================================
        SUMMARY
 
-       Savings      = all member card balances
+       Savings      = member card balances + savings goal balances
        Actual Money = on-hand cash
        Total Money  = savings + actual money
     ========================================================= */
@@ -125,6 +114,14 @@ class MemberFinanceController extends Controller
                 $member
             );
 
+        $goals = MemberSavingsGoal::query()
+            ->where('member_id', $member->id)
+            ->get(['balance']);
+
+        foreach ($goals as $goal) {
+            $savingsCents += Money::toCents($goal->balance);
+        }
+
         $actualMoneyCents =
             Money::toCents(
                 $cash->balance
@@ -137,23 +134,19 @@ class MemberFinanceController extends Controller
 
         return response()->json([
             'data' => [
-                'savings' =>
-                    Money::fromCents(
-                        $savingsCents
-                    ),
+                'savings' => Money::fromCents(
+                    $savingsCents
+                ),
 
-                'actual_money' =>
-                    Money::fromCents(
-                        $actualMoneyCents
-                    ),
+                'actual_money' => Money::fromCents(
+                    $actualMoneyCents
+                ),
 
-                'total_money' =>
-                    Money::fromCents(
-                        $totalMoneyCents
-                    ),
+                'total_money' => Money::fromCents(
+                    $totalMoneyCents
+                ),
 
-                'currency' =>
-                    'PHP',
+                'currency' => 'PHP',
             ],
         ]);
     }
@@ -185,8 +178,7 @@ class MemberFinanceController extends Controller
                 ]);
 
         return response()->json([
-            'data' =>
-                $cards,
+            'data' => $cards,
         ]);
     }
 
@@ -208,10 +200,9 @@ class MemberFinanceController extends Controller
             );
 
         return response()->json([
-            'data' =>
-                $this->cashResponse(
-                    $cash
-                ),
+            'data' => $this->cashResponse(
+                $cash
+            ),
         ]);
     }
 
@@ -246,14 +237,11 @@ class MemberFinanceController extends Controller
                     'max:9999999999999.99',
                 ],
             ], [
-                'amount.required' =>
-                    'Wallet balance is required.',
+                'amount.required' => 'Wallet balance is required.',
 
-                'amount.numeric' =>
-                    'Wallet balance must be a valid amount.',
+                'amount.numeric' => 'Wallet balance must be a valid amount.',
 
-                'amount.min' =>
-                    'Wallet balance cannot be negative.',
+                'amount.min' => 'Wallet balance cannot be negative.',
             ]);
 
         $balance =
@@ -305,13 +293,11 @@ class MemberFinanceController extends Controller
         $cash->refresh();
 
         return response()->json([
-            'message' =>
-                'Wallet balance updated successfully.',
+            'message' => 'Wallet balance updated successfully.',
 
-            'data' =>
-                $this->cashResponse(
-                    $cash
-                ),
+            'data' => $this->cashResponse(
+                $cash
+            ),
         ]);
     }
 }

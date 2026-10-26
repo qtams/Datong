@@ -15,6 +15,7 @@ import MembersPage from "../pages/members/MembersPage";
 import MemberDetailsPage from "../pages/members/MemberDetailsPage";
 
 import SavingsGoalsPage from "../pages/savings/SavingsGoalsPage";
+import SavingsGoalDetailsPage from "../pages/savings/SavingsGoalDetailsPage";
 
 /* =========================================================
    PAGE METADATA
@@ -61,6 +62,13 @@ export const PAGE_META = {
     path: "/savings-goals",
     title: "Savings Goals",
     description: "Track savings goals and progress",
+  },
+
+  savingsGoalDetails: {
+    id: "savings-goals",
+    path: "/savings-goals/:goalId",
+    title: "Savings goal",
+    description: "Goal details and wallet transfers",
   },
 
   analytics: {
@@ -146,6 +154,10 @@ export function getPageMeta(pathname) {
 
   if (normalized.startsWith("/members/")) {
     return PAGE_META.memberDetails;
+  }
+
+  if (normalized.startsWith("/savings-goals/")) {
+    return PAGE_META.savingsGoalDetails;
   }
 
   return PAGE_META.dashboard;
@@ -437,7 +449,20 @@ function AppRoutes({ loading = false }) {
 
       <Route
         path={PAGE_META.savingsGoals.path}
-        element={<SavingsGoalsPage loading={loading} />}
+        element={
+          <MemberOnlyRoute>
+            <SavingsGoalsPage loading={loading} />
+          </MemberOnlyRoute>
+        }
+      />
+
+      <Route
+        path={PAGE_META.savingsGoalDetails.path}
+        element={
+          <MemberOnlyRoute>
+            <SavingsGoalDetailsPage loading={loading} />
+          </MemberOnlyRoute>
+        }
       />
 
       {/* ===================================================

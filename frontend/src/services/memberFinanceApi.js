@@ -24,7 +24,9 @@ async function request(path, { token = null, headers = {}, ...options } = {}) {
   const requestHeaders = {
     Accept: "application/json",
 
-    "Content-Type": "application/json",
+    ...(options.body instanceof FormData
+      ? {}
+      : { "Content-Type": "application/json" }),
 
     Authorization: `Bearer ${idToken}`,
 
@@ -150,9 +152,11 @@ export async function deleteMemberCard(memberCardId) {
    ON-HAND CASH / DATONG WALLET
 ========================================================= */
 
-export async function getCashAccount() {
+export async function getCashAccount({ signal } = {}) {
   const response = await request("/api/member-finance/cash", {
     method: "GET",
+
+    signal,
   });
 
   return response?.data;
@@ -181,6 +185,128 @@ export async function updateCashBalance(amount) {
   });
 
   return response?.data;
+}
+
+/* =========================================================
+   SAVINGS GOALS
+========================================================= */
+
+function mapSavingsGoal(goal) {
+  return {
+    id: String(goal.id),
+    name: goal.name,
+    iconId: goal.icon_id,
+    imageData: goal.image_url || "",
+    targetAmount: goal.target_amount,
+    currentAmount: goal.current_amount,
+    targetDate: goal.target_date || "",
+    walletLinked: true,
+    version: goal.version,
+    createdAt: goal.created_at,
+  };
+}
+
+function savingsGoalFormData(values, version) {
+  const body = new FormData();
+
+  body.append("name", values.name);
+  body.append("icon_id", values.iconId);
+  body.append("target_amount", String(values.targetAmount));
+  body.append("current_amount", String(values.currentAmount));
+  body.append("target_date", values.targetDate || "");
+
+  if (version !== undefined) {
+    body.append("version", String(version));
+    body.append("_method", "PUT");
+  }
+
+  if (values.imageData?.startsWith("data:")) {
+    const image = values.imageData.match(
+      /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/,
+    );
+
+    if (!image) {
+      throw new Error("Choose a JPEG, PNG, or WebP goal photo.");
+    }
+
+    const bytes = Uint8Array.from(atob(image[2]), (character) =>
+      character.charCodeAt(0),
+    );
+    const extension = image[1] === "image/jpeg" ? "jpg" : image[1].split("/")[1];
+
+    body.append(
+      "image",
+      new Blob([bytes], { type: image[1] }),
+      `goal.${extension}`,
+    );
+  } else if (!values.imageData) {
+    body.append("remove_image", "1");
+  }
+
+  return body;
+}
+
+export async function getSavingsGoals({ signal } = {}) {
+  const response = await request("/api/member-finance/savings-goals", { signal });
+
+  if (!Array.isArray(response?.data)) {
+    throw new Error("Unable to read your savings goals. Try again.");
+  }
+
+  return response.data.map(mapSavingsGoal);
+}
+
+export async function getSavingsGoal(goalId, { signal } = {}) {
+  const response = await request(`/api/member-finance/savings-goals/${goalId}`, { signal });
+  return mapSavingsGoal(response.data);
+}
+
+export async function getSavingsGoalEntries(goalId, { page = 1, signal } = {}) {
+  const response = await request(`/api/member-finance/savings-goals/${goalId}/entries?page=${page}`, { signal });
+  return {
+    entries: response.data.map((entry) => ({
+      id: String(entry.id), type: entry.type, amount: entry.amount,
+      goalBalanceAfter: entry.goal_balance_after,
+      walletBalanceAfter: entry.wallet_balance_after,
+      createdAt: entry.created_at,
+    })),
+    hasMore: response.meta.has_more,
+  };
+}
+
+export async function transferSavingsGoal(goalId, { direction, amount, version }) {
+  const response = await request(`/api/member-finance/savings-goals/${goalId}/transfers`, {
+    method: "POST",
+    body: JSON.stringify({ direction, amount, version }),
+  });
+  return { goal: mapSavingsGoal(response.data.goal), wallet: response.data.wallet };
+}
+
+export async function createSavingsGoal(values) {
+  const response = await request("/api/member-finance/savings-goals", {
+    method: "POST",
+    body: savingsGoalFormData(values),
+  });
+
+  return { goal: mapSavingsGoal(response.data.goal), wallet: response.data.wallet };
+}
+
+export async function updateSavingsGoal(goalId, values, version) {
+  const response = await request(`/api/member-finance/savings-goals/${goalId}`, {
+    method: "POST",
+    body: savingsGoalFormData(values, version),
+  });
+
+  return { goal: mapSavingsGoal(response.data.goal), wallet: response.data.wallet };
+}
+
+export async function deleteSavingsGoal(goalId, version) {
+  const response = await request(`/api/member-finance/savings-goals/${goalId}`, {
+    method: "DELETE",
+    body: JSON.stringify({ version }),
+  });
+
+  return response.data;
 }
 
 /* =========================================================
