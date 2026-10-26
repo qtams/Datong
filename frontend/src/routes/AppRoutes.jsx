@@ -14,6 +14,8 @@ import MembersPage from "../pages/members/MembersPage";
 
 import MemberDetailsPage from "../pages/members/MemberDetailsPage";
 
+import SavingsGoalsPage from "../pages/savings/SavingsGoalsPage";
+
 /* =========================================================
    PAGE METADATA
 ========================================================= */
@@ -431,19 +433,11 @@ function AppRoutes({ loading = false }) {
 
       {/* ===================================================
           SAVINGS GOALS
-
-          NOT CONNECTED YET
       =================================================== */}
 
       <Route
         path={PAGE_META.savingsGoals.path}
-        element={
-          <ModulePlaceholder
-            loading={loading}
-            title={PAGE_META.savingsGoals.title}
-            description="Create savings targets and monitor progress toward your goals."
-          />
-        }
+        element={<SavingsGoalsPage loading={loading} />}
       />
 
       {/* ===================================================

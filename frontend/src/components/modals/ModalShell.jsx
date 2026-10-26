@@ -13,6 +13,10 @@ import useBodyScrollLock from "../../hooks/useBodyScrollLock";
    mobileSheet = true
    Mobile becomes a native-feeling bottom sheet.
    Desktop remains a centered modal.
+
+   mobileFullscreen = true
+   Mobile becomes an edge-to-edge flow screen.
+   Desktop remains a centered modal.
 ========================================================= */
 
 export default function ModalShell({
@@ -22,10 +26,23 @@ export default function ModalShell({
   labelledBy,
   children,
   mobileSheet = false,
+  mobileFullscreen = false,
 }) {
   const dragControls = useDragControls();
 
-  const [mobileSheetMode, setMobileSheetMode] = useState(false);
+  const [mobileViewport, setMobileViewport] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(max-width: 639px)").matches,
+  );
+
+  const mobileFullscreenMode =
+    mobileFullscreen && mobileViewport;
+
+  const mobileSheetMode =
+    mobileSheet &&
+    mobileViewport &&
+    !mobileFullscreenMode;
 
   const onCloseRef = useRef(onClose);
 
@@ -47,7 +64,7 @@ export default function ModalShell({
     const media = window.matchMedia("(max-width: 639px)");
 
     const update = () => {
-      setMobileSheetMode(mobileSheet && media.matches);
+      setMobileViewport(media.matches);
     };
 
     update();
@@ -65,7 +82,7 @@ export default function ModalShell({
     return () => {
       media.removeListener(update);
     };
-  }, [mobileSheet]);
+  }, []);
 
   /* =======================================================
      ESCAPE
@@ -113,23 +130,25 @@ export default function ModalShell({
         y: "100%",
         scale: 1,
       }
+    : mobileFullscreenMode
+      ? {
+          opacity: 0,
+          x: 20,
+          y: 0,
+          scale: 1,
+        }
     : {
         opacity: 0,
         y: 12,
         scale: 0.985,
       };
 
-  const animateMotion = mobileSheetMode
-    ? {
-        opacity: 1,
-        y: 0,
-        scale: 1,
-      }
-    : {
-        opacity: 1,
-        y: 0,
-        scale: 1,
-      };
+  const animateMotion = {
+    opacity: 1,
+    x: 0,
+    y: 0,
+    scale: 1,
+  };
 
   const exitMotion = mobileSheetMode
     ? {
@@ -137,6 +156,13 @@ export default function ModalShell({
         y: "100%",
         scale: 1,
       }
+    : mobileFullscreenMode
+      ? {
+          opacity: 0,
+          x: 20,
+          y: 0,
+          scale: 1,
+        }
     : {
         opacity: 0,
         y: 8,
@@ -163,10 +189,18 @@ export default function ModalShell({
         inset-0
         z-[300]
 
+        overflow-hidden
+
         flex
         justify-center
 
-        ${mobileSheetMode ? "items-end p-0" : "items-center p-4 sm:p-6"}
+        ${
+          mobileSheetMode
+            ? "items-end p-0"
+            : mobileFullscreenMode
+              ? "items-stretch p-0"
+              : "items-center p-4 sm:p-6"
+        }
       `}
     >
       {/* =====================================================
@@ -244,7 +278,7 @@ export default function ModalShell({
           z-10
 
           w-full
-          ${size}
+          ${mobileFullscreenMode ? "max-w-none" : size}
 
           overflow-hidden
 
@@ -254,7 +288,19 @@ export default function ModalShell({
           bg-white
 
           ${
-            mobileSheetMode
+            mobileFullscreenMode
+              ? `
+                w-[100dvw]
+                h-[100dvh]
+                max-h-none
+
+                rounded-none
+
+                border-0
+
+                shadow-none
+              `
+              : mobileSheetMode
               ? `
                 max-h-[92dvh]
 
@@ -332,9 +378,11 @@ export default function ModalShell({
             overscroll-contain
 
             ${
-              mobileSheetMode
-                ? "max-h-[calc(92dvh-36px)]"
-                : "max-h-[calc(100vh-2rem)]"
+              mobileFullscreenMode
+                ? "h-[100dvh] max-h-none"
+                : mobileSheetMode
+                  ? "max-h-[calc(92dvh-36px)]"
+                  : "max-h-[calc(100vh-2rem)]"
             }
           `}
         >
