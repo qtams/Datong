@@ -6,7 +6,6 @@ import {
 
 import {
   ArrowLeft,
-  CalendarDays,
   Check,
   ChevronRight,
   Coins,
@@ -24,6 +23,7 @@ import {
 
 import ModalShell from "./ModalShell";
 import MoneyInput from "../forms/MoneyInput";
+import SavingsGoalDatePicker from "../forms/SavingsGoalDatePicker";
 import { moneyValue, normalizeMoneyInput } from "../../utils/moneyInput";
 
 import {
@@ -230,6 +230,8 @@ function SavingsGoalModal({
 
   const [iconPickerOpen, setIconPickerOpen] =
     useState(false);
+
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   const [errors, setErrors] = useState({});
 
@@ -448,7 +450,7 @@ function SavingsGoalModal({
   const handleSubmit = (event) => {
     event.preventDefault();
 
-    if (saving) {
+    if (saving || datePickerOpen) {
       return;
     }
 
@@ -488,7 +490,7 @@ function SavingsGoalModal({
       mobileFullscreen
       size="max-w-[620px]"
       labelledBy="savings-goal-modal-title"
-      onClose={saving ? undefined : onClose}
+      onClose={saving || datePickerOpen ? undefined : onClose}
     >
       <form
         onSubmit={handleSubmit}
@@ -1073,36 +1075,13 @@ function SavingsGoalModal({
                   </div>
 
                   <div className="mx-auto mt-7 w-full max-w-[430px]">
-                    <label
-                      htmlFor="savings-goal-date"
-                      className="mb-2 block text-[10px] font-medium text-gray-600"
-                    >
-                      Target date
-                      <span className="ml-1 font-normal text-gray-400">
-                        (optional)
-                      </span>
-                    </label>
-
-                    <div className="relative">
-                      <CalendarDays
-                        size={16}
-                        strokeWidth={1.5}
-                        className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-                      />
-
-                      <input
-                        id="savings-goal-date"
-                        type="date"
-                        value={form.targetDate}
-                        onChange={(event) =>
-                          setField(
-                            "targetDate",
-                            event.target.value,
-                          )
-                        }
-                        className="h-12 w-full rounded-xl border border-gray-200 bg-gray-50 pl-11 pr-4 text-[12px] font-medium text-gray-700 outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
-                      />
-                    </div>
+                    <SavingsGoalDatePicker
+                      value={form.targetDate}
+                      disabled={saving}
+                      open={datePickerOpen}
+                      onOpenChange={setDatePickerOpen}
+                      onChange={(value) => setField("targetDate", value)}
+                    />
                   </div>
                 </div>
               )}

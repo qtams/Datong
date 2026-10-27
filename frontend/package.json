@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "test:savings": "node --experimental-vm-modules --test src/services/memberFinanceApi.test.js src/utils/moneyInput.test.js",
+    "test:savings": "node --experimental-vm-modules --test src/services/memberFinanceApi.test.js src/utils/moneyInput.test.js src/utils/goalTargetDate.test.js",
     "preview": "vite preview"
   },
   "dependencies": {

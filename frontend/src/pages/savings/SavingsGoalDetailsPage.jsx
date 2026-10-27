@@ -43,11 +43,15 @@ function formatDate(value, includeTime = false) {
 
 function GoalDetailsSkeleton() {
   return (
-    <div aria-label="Loading savings goal" className="animate-pulse">
-      <div className="mb-6 h-7 w-44 rounded bg-gray-200" />
-      <div className="grid gap-6 lg:grid-cols-[380px_minmax(0,1fr)]">
-        <div className="h-[465px] rounded-[28px] bg-gray-200" />
-        <div className="h-[465px] rounded-[24px] bg-gray-100" />
+    <div role="status" className="motion-safe:animate-pulse">
+      <span className="sr-only">Loading savings goal...</span>
+      <div aria-hidden="true" className="mb-6 h-7 w-44 rounded bg-gray-200" />
+      <div
+        aria-hidden="true"
+        className="grid gap-5 lg:grid-cols-[minmax(280px,340px)_minmax(0,1fr)] lg:gap-6"
+      >
+        <div className="h-72 rounded-2xl bg-gray-200 lg:h-96" />
+        <div className="h-96 rounded-2xl bg-gray-100" />
       </div>
     </div>
   );
@@ -222,9 +226,9 @@ function GoalDetailsContent({ goalId, loading }) {
   const backLink = (
     <Link
       to="/savings-goals"
-      className="mb-4 inline-flex min-h-9 items-center gap-2 rounded-md text-[11px] font-medium text-gray-500 hover:text-gray-950 focus-visible:outline-2 focus-visible:outline-offset-4"
+      className="mb-2 inline-flex min-h-11 items-center gap-2 rounded-md text-[12px] font-medium text-gray-600 transition-colors hover:text-black focus-visible:outline-2 focus-visible:outline-black focus-visible:outline-offset-4"
     >
-      <ArrowLeft size={15} /> Savings goals
+      <ArrowLeft aria-hidden="true" size={15} /> Savings goals
     </Link>
   );
   if (loading || goalLoading)
@@ -249,7 +253,7 @@ function GoalDetailsContent({ goalId, loading }) {
           <button
             type="button"
             onClick={refreshGoal}
-            className="mt-4 rounded-lg bg-black px-4 py-2 text-[11px] text-white"
+            className="mt-4 min-h-11 rounded-lg bg-black px-4 py-2 text-[12px] font-medium text-white hover:bg-gray-800 focus-visible:outline-2 focus-visible:outline-black focus-visible:outline-offset-2"
           >
             Try again
           </button>
@@ -260,144 +264,189 @@ function GoalDetailsContent({ goalId, loading }) {
 
   const icon = getSavingsGoalIcon(goal.iconId);
   const GoalIcon = icon.icon;
-  const progress = Math.min(
-    100,
-    (Number(goal.currentAmount) / Number(goal.targetAmount)) * 100,
-  );
+  const currentAmount = Math.max(0, Number(goal.currentAmount) || 0);
+  const targetAmount = Math.max(0, Number(goal.targetAmount) || 0);
+  const progress =
+    targetAmount > 0
+      ? Math.min(100, (currentAmount / targetAmount) * 100)
+      : 0;
+  const progressLabel =
+    progress >= 100 ? "Goal reached" : `${Math.floor(progress)}% saved`;
+  const remainingAmount = Math.max(0, targetAmount - currentAmount);
 
   return (
-    <div className="mx-auto w-full max-w-[1180px]">
+    <div className="mx-auto w-full min-w-0 max-w-[1180px]">
       {backLink}
-      <PageHeader title={goal.name} />
-      <div className="grid items-start gap-6 lg:grid-cols-[380px_minmax(0,1fr)] lg:gap-8">
+      <PageHeader
+        title={
+          <span className="block [overflow-wrap:anywhere]">{goal.name}</span>
+        }
+      />
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(280px,340px)_minmax(0,1fr)] lg:gap-6">
         <section
           aria-label="Goal balance and transfers"
-          className="rounded-[28px] bg-[#c6dfe1] px-5 pb-6 pt-5 sm:px-7 sm:pt-7 lg:sticky lg:top-24"
+          className="min-w-0 rounded-2xl border border-gray-200 bg-white p-5 sm:p-6 lg:sticky lg:top-24"
         >
-          <div className="relative mx-auto flex aspect-square w-full max-w-[300px] items-center justify-center">
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 320 320"
-              className="absolute inset-0 h-full w-full -rotate-90"
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <h2 className="text-[13px] font-semibold text-gray-950">
+              Goal balance
+            </h2>
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => setEditing(true)}
+              aria-label="Edit goal details"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-gray-200 px-3 text-[12px] font-medium text-gray-700 transition-colors hover:border-gray-400 hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-black focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <circle
-                cx="160"
-                cy="160"
-                r="153"
-                fill="none"
-                stroke="#afd0d3"
-                strokeWidth="4"
-              />
-              <circle
-                cx="160"
-                cy="160"
-                r="153"
-                fill="none"
-                stroke="#537e84"
-                strokeWidth="4"
-                pathLength="100"
-                strokeDasharray={`${progress} 100`}
-                strokeLinecap="round"
-              />
-            </svg>
-            <div className="relative flex max-w-[85%] flex-col items-center text-center">
-              <div className="relative">
-                <span
-                  className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full"
-                  style={{ background: icon.background, color: icon.color }}
-                >
-                  {goal.imageData ? (
-                    <img
-                      src={goal.imageData}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <GoalIcon size={30} strokeWidth={1.5} />
-                  )}
-                </span>
-                <button
-                  type="button"
-                  disabled={saving}
-                  onClick={() => setEditing(true)}
-                  aria-label="Edit goal details"
-                  title="Edit goal details"
-                  className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full border-2 border-[#c6dfe1] bg-white text-gray-700 hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50"
-                >
-                  <Pencil size={12} strokeWidth={1.7} />
-                </button>
-              </div>
-              <p className="mt-4 max-w-full break-all text-[28px] font-semibold leading-tight tracking-[-0.04em] text-gray-950 sm:text-[30px]">
+              <Pencil aria-hidden="true" size={14} strokeWidth={1.7} />
+              Edit
+            </button>
+          </div>
+
+          <div className="flex min-w-0 items-center gap-4 lg:flex-col lg:gap-5 lg:text-center">
+            <div
+              role="progressbar"
+              aria-label="Savings target progress"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.floor(progress)}
+              aria-valuetext={`${Math.floor(progress)}% of your savings target reached`}
+              className="relative flex h-20 w-20 shrink-0 items-center justify-center lg:h-28 lg:w-28"
+            >
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 120 120"
+                className="absolute inset-0 h-full w-full -rotate-90"
+              >
+                <circle
+                  cx="60"
+                  cy="60"
+                  r="56"
+                  fill="none"
+                  stroke="#e5e7eb"
+                  strokeWidth="4"
+                />
+                <circle
+                  cx="60"
+                  cy="60"
+                  r="56"
+                  fill="none"
+                  stroke="#111111"
+                  strokeWidth="4"
+                  pathLength="100"
+                  strokeDasharray={`${progress} 100`}
+                  strokeLinecap="round"
+                  opacity={progress > 0 ? 1 : 0}
+                />
+              </svg>
+              <span className="flex h-[78%] w-[78%] items-center justify-center overflow-hidden rounded-full bg-[#111111] text-white">
+                {goal.imageData ? (
+                  <img
+                    src={goal.imageData}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <GoalIcon
+                    aria-hidden="true"
+                    size={30}
+                    strokeWidth={1.5}
+                    className="lg:h-10 lg:w-10"
+                  />
+                )}
+              </span>
+            </div>
+            <div className="min-w-0 max-w-full">
+              <p className="text-[12px] text-gray-600">Saved so far</p>
+              <p className="mt-1 text-[26px] font-semibold leading-tight tracking-[-0.04em] tabular-nums text-gray-950 [overflow-wrap:anywhere] sm:text-[30px] lg:text-[34px]">
                 {formatGoalMoney(goal.currentAmount)}
               </p>
-              <p className="mt-2 flex items-center gap-1.5 text-[10px] text-gray-700">
-                <Target size={12} /> Target:{" "}
-                {formatGoalMoney(goal.targetAmount)}
+              <p className="mt-1.5 text-[12px] leading-5 text-gray-600 [overflow-wrap:anywhere]">
+                of {formatGoalMoney(goal.targetAmount)} target
               </p>
-              <span className="sr-only">
-                {Math.round(progress)}% of your savings target reached.
-              </span>
             </div>
           </div>
 
-          <div className="mt-5 flex justify-center gap-12">
+          <div className="mt-5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-[12px]">
+            <p className="font-semibold text-gray-950">{progressLabel}</p>
+            {remainingAmount > 0 && (
+              <p className="min-w-0 text-gray-600 [overflow-wrap:anywhere]">
+                {formatGoalMoney(remainingAmount)} to go
+              </p>
+            )}
+          </div>
+
+          <div className="mt-5 grid grid-cols-2 gap-3">
             <button
               type="button"
               disabled={saving}
               onClick={() => setDirection("in")}
-              className="group flex flex-col items-center gap-2 rounded-xl px-2 py-1 text-[11px] font-medium text-gray-900 focus-visible:outline-2 focus-visible:outline-offset-4 disabled:opacity-40"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-black px-2 py-3 text-[12px] font-medium text-white transition-colors hover:bg-gray-800 focus-visible:outline-2 focus-visible:outline-black focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#20252b] text-[#89e7ec] transition-transform group-hover:scale-105">
-                <Plus size={24} strokeWidth={1.6} />
-              </span>
+              <Plus
+                aria-hidden="true"
+                className="shrink-0"
+                size={16}
+                strokeWidth={1.8}
+              />
               Transfer in
             </button>
             <button
               type="button"
               disabled={saving}
               onClick={() => setDirection("out")}
-              className="group flex flex-col items-center gap-2 rounded-xl px-2 py-1 text-[11px] font-medium text-gray-900 focus-visible:outline-2 focus-visible:outline-offset-4 disabled:opacity-40"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-2 py-3 text-[12px] font-medium text-gray-900 transition-colors hover:border-gray-400 hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-black focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#b3d0d3] text-[#25343b] transition-transform group-hover:scale-105">
-                <ArrowUpRight size={23} strokeWidth={1.6} />
-              </span>
+              <ArrowUpRight
+                aria-hidden="true"
+                className="shrink-0"
+                size={16}
+                strokeWidth={1.8}
+              />
               Transfer out
             </button>
           </div>
-          <div className="mt-6 flex items-center justify-between gap-3 border-t border-[#a7c8cc]/60 pt-4 text-[10px] text-[#3f5c62]">
-            <span className="flex items-center gap-1.5">
-              <WalletCards size={13} /> Datong Wallet
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-gray-200 pt-4 text-[12px]">
+            <span className="flex items-center gap-2 text-gray-600">
+              <WalletCards aria-hidden="true" size={15} strokeWidth={1.6} />
+              Datong Wallet
             </span>
-            <span className="font-semibold tabular-nums">
+            <span className="min-w-0 font-semibold tabular-nums text-gray-950 [overflow-wrap:anywhere]">
               {formatGoalMoney(wallet.balance)}
             </span>
           </div>
         </section>
 
-        <div className="min-w-0 overflow-hidden rounded-[24px] border border-gray-100 bg-white">
-          <section aria-label="Goal details" className="px-5 pb-6 pt-2 sm:px-6">
+        <div className="min-w-0 rounded-2xl border border-gray-200 bg-white">
+          <section
+            aria-labelledby="goal-details-title"
+            className="px-5 pb-2 pt-5 sm:px-6 sm:pt-6"
+          >
+            <h2 id="goal-details-title" className="mb-1 text-[14px] font-semibold text-gray-950">
+              Goal details
+            </h2>
             <dl className="divide-y divide-gray-100">
-              <div className="flex items-center justify-between gap-4 py-4 text-[12px]">
-                <dt className="flex items-center gap-2.5 text-gray-500">
-                  <Target size={16} strokeWidth={1.6} />
+              <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-3 py-4 text-[12px]">
+                <dt className="flex items-center gap-2 text-gray-600">
+                  <Target aria-hidden="true" className="shrink-0" size={15} strokeWidth={1.6} />
                   Saving target
                 </dt>
-                <dd className="font-semibold tabular-nums text-gray-900">
+                <dd className="min-w-0 text-right font-semibold tabular-nums text-gray-950 [overflow-wrap:anywhere]">
                   {formatGoalMoney(goal.targetAmount)}
                 </dd>
               </div>
-              <div className="flex items-center justify-between gap-4 py-4 text-[12px]">
-                <dt className="flex items-center gap-2.5 text-gray-500">
-                  <CalendarDays size={16} strokeWidth={1.6} />
+              <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-3 py-4 text-[12px]">
+                <dt className="flex items-center gap-2 text-gray-600">
+                  <CalendarDays aria-hidden="true" className="shrink-0" size={15} strokeWidth={1.6} />
                   Target date
                 </dt>
                 <dd className="text-right font-medium text-gray-800">
                   {formatDate(goal.targetDate)}
                 </dd>
               </div>
-              <div className="flex items-center justify-between gap-4 py-4 text-[12px]">
-                <dt className="flex items-center gap-2.5 text-gray-500">
-                  <Clock3 size={16} strokeWidth={1.6} />
+              <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-3 py-4 text-[12px]">
+                <dt className="flex items-center gap-2 text-gray-600">
+                  <Clock3 aria-hidden="true" className="shrink-0" size={15} strokeWidth={1.6} />
                   Opened
                 </dt>
                 <dd className="text-right font-medium text-gray-800">
@@ -405,34 +454,24 @@ function GoalDetailsContent({ goalId, loading }) {
                 </dd>
               </div>
             </dl>
-            <div className="mt-3 flex justify-center">
-              <button
-                type="button"
-                disabled={saving}
-                onClick={handleCloseGoal}
-                className="min-h-10 rounded-full border border-gray-400 px-5 py-2 text-[11px] font-medium text-gray-700 transition-colors hover:border-red-300 hover:bg-red-50 hover:text-red-700 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50"
-              >
-                {saving && !editing && !direction
-                  ? "Closing..."
-                  : "Close this savings goal"}
-              </button>
-            </div>
           </section>
 
           <section
-            aria-label="Goal activity"
-            className="border-t border-gray-100 px-5 py-5 sm:px-6"
+            aria-labelledby="goal-activity-title"
+            aria-busy={activityLoading}
+            className="border-t border-gray-200 px-5 py-5 sm:px-6 sm:py-6"
           >
-            <h2 className="text-[13px] font-semibold text-gray-900">
+            <h2 id="goal-activity-title" className="text-[14px] font-semibold text-gray-950">
               Goal activity
             </h2>
             {activityLoading && activityPage === 1 ? (
               <div
-                aria-label="Loading goal activity"
-                className="mt-5 space-y-4 animate-pulse"
+                role="status"
+                className="mt-5 space-y-4 motion-safe:animate-pulse"
               >
+                <span className="sr-only">Loading goal activity...</span>
                 {[0, 1, 2].map((item) => (
-                  <div key={item} className="h-10 rounded-lg bg-gray-100" />
+                  <div key={item} aria-hidden="true" className="h-12 rounded-lg bg-gray-100" />
                 ))}
               </div>
             ) : (
@@ -440,8 +479,15 @@ function GoalDetailsContent({ goalId, loading }) {
                 {activity.map((entry) => {
                   const incoming = entry.type === "deposit";
                   return (
-                    <li key={entry.id} className="flex items-center gap-3 py-4">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-50 text-gray-700">
+                    <li key={entry.id} className="flex items-start gap-2.5 py-4 sm:gap-3">
+                      <span
+                        aria-hidden="true"
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 ${
+                          incoming
+                            ? "bg-black text-white"
+                            : "border border-gray-200 bg-white text-gray-700"
+                        }`}
+                      >
                         {incoming ? (
                           <ArrowDownLeft size={17} strokeWidth={1.6} />
                         ) : (
@@ -449,18 +495,21 @@ function GoalDetailsContent({ goalId, loading }) {
                         )}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="text-[11px] font-medium text-gray-900">
+                        <p className="text-[12px] font-medium leading-5 text-gray-950">
                           {incoming ? "Transfer in" : "Transfer out"}
-                          <span className="ml-1.5 font-normal text-gray-400">
+                          <span className="block text-[11px] font-normal text-gray-600 xl:ml-1.5 xl:inline">
                             {incoming ? "from wallet" : "to wallet"}
                           </span>
                         </p>
-                        <p className="mt-1 text-[10px] text-gray-400">
+                        <p className="mt-1 text-[11px] leading-4 text-gray-600">
                           {formatDate(entry.createdAt, true)}
                         </p>
                       </div>
-                      <span className="shrink-0 text-right text-[12px] font-semibold tabular-nums text-gray-800">
-                        {incoming ? "+" : "−"}
+                      <span
+                        aria-label={`${incoming ? "Added" : "Withdrawn"} ${formatGoalMoney(entry.amount)}`}
+                        className="min-w-0 max-w-[48%] text-right text-[12px] font-semibold leading-5 tabular-nums text-gray-950 [overflow-wrap:anywhere] sm:text-[13px]"
+                      >
+                        {incoming ? "+" : "\u2212"}
                         {formatGoalMoney(entry.amount)}
                       </span>
                     </li>
@@ -469,13 +518,23 @@ function GoalDetailsContent({ goalId, loading }) {
               </ul>
             )}
             {!activityLoading && !activityError && activity.length === 0 && (
-              <p className="py-8 text-center text-[11px] leading-5 text-gray-400">
-                No transfers yet. Add money from your wallet to start this goal.
-              </p>
+              <div className="py-8 text-center">
+                <p className="text-[13px] font-medium text-gray-950">
+                  No transfers yet
+                </p>
+                <p className="mx-auto mt-2 max-w-64 text-[12px] leading-5 text-gray-600">
+                  Transfer money from your wallet to start saving toward this goal.
+                </p>
+              </div>
             )}
             {activityError && (
-              <div role="alert" className="mt-3 text-[11px] text-red-600">
-                {activityError}
+              <div
+                role="alert"
+                className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-[12px]"
+              >
+                <p className="min-w-0 text-gray-700 [overflow-wrap:anywhere]">
+                  {activityError}
+                </p>
                 <button
                   type="button"
                   onClick={() => {
@@ -483,7 +542,7 @@ function GoalDetailsContent({ goalId, loading }) {
                     setActivityError("");
                     setActivityRefresh((value) => value + 1);
                   }}
-                  className="ml-2 rounded px-1 py-2 font-medium underline"
+                  className="min-h-11 rounded-md px-1 font-medium text-gray-950 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-black focus-visible:outline-offset-2"
                 >
                   Try again
                 </button>
@@ -497,12 +556,26 @@ function GoalDetailsContent({ goalId, loading }) {
                   setActivityLoading(true);
                   setActivityPage((value) => value + 1);
                 }}
-                className="mt-3 w-full rounded-lg py-3 text-[11px] font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+                className="mt-3 min-h-11 w-full rounded-lg border border-gray-200 px-3 py-3 text-[12px] font-medium text-gray-700 transition-colors hover:border-gray-400 hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-black focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {activityLoading ? "Loading..." : "Load more activity"}
               </button>
             )}
           </section>
+
+          <footer className="flex flex-col gap-3 border-t border-gray-200 px-5 py-5 sm:px-6 xl:flex-row xl:items-center xl:justify-between xl:gap-5">
+            <p className="min-w-0 text-[12px] leading-5 text-gray-600">
+              Closing this goal returns your savings to Datong Wallet.
+            </p>
+            <button
+              type="button"
+              disabled={saving}
+              onClick={handleCloseGoal}
+              className="min-h-11 shrink-0 rounded-lg border border-gray-300 px-4 py-2.5 text-[12px] font-medium text-gray-700 transition-colors hover:border-black hover:bg-gray-50 hover:text-black focus-visible:outline-2 focus-visible:outline-black focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {saving && !editing && !direction ? "Closing..." : "Close goal"}
+            </button>
+          </footer>
         </div>
       </div>
 
